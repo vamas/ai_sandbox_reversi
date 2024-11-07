@@ -1,39 +1,40 @@
-import random
-import copy
+from abc import ABC, abstractmethod
 
 from player import Player
 
 class AgentMinimax(Player):
 
-    def __init__(self, color, name):
-        super().__init__(color, name, is_human=False)
+    def __init__(self, name, code_value = 1):
+        super().__init__(name, code_value, is_human=False)
         self.strategy = "minimax"
 
-    def get_available_moves(self, board):
-        if self == board.player1:
-            return board.available_moves_player1()
-        else:
-            return board.available_moves_player2()
+    @property
+    @abstractmethod
+    def max_depth(self):
+        pass
+
+    @abstractmethod
+    def heuristic_fn(self, board, is_maximizing, player_code_value, opponent_code_value):
+        pass
+
+    @abstractmethod
+    def order_moves(self, moves):
+        pass
 
     def find_move(self, board):
         best_score = -float('inf')
         best_move = None, None
-        for r,c in self.get_available_moves(board):
-            board_copy = copy.deepcopy(board)
-            board_copy.make_move(r, c, self)
-            score = self.minimax(board_copy, max_level = 3)
+        available_moves = self.order_moves(board.available_moves(self.code_value))
+        for r,c in available_moves:
+            board_clone = board.clone()
+            board_clone.make_move(r, c, self.code_value)
+            score = self.minimax(board_clone, is_maximizing = False)
             if score > best_score:
                 best_score = score
                 best_move = r,c
         if best_move == (None, None):
             print("Can't find suitable move")
         return best_move
-
-    def make_move(self, board):
-        row, col = self.find_move(board)
-        if row is None or col is None:
-            return False
-        return board.make_move(row, col, self)
 
     def utility(self, board):
         w = board.winner()
@@ -45,33 +46,27 @@ class AgentMinimax(Player):
             return -1
 
     def terminal_test(self, board):
-        board.can_continue()
+        a = board.can_continue()
+        return not a
 
-    def minimax(self, board, is_maximizing = True, max_level = 5, a = -float('inf'), b = float('inf'), level = 0):
+    def minimax(self, board, is_maximizing = True, a = -float('inf'), b = float('inf'), level = 0):
         # R player is MAX player and B player is MIN player
         if self.terminal_test(board):
             return self.utility(board)
-        if level > max_level:
-            # return random.choice([-1,0,1])
-            return 0
+
+        player = self.code_value
+        opponent = board.get_opponent(self.code_value)
+        if level > self.max_depth:
+            return self.heuristic_fn(board, is_maximizing, player, opponent)
+
+        board_clone = board.clone()
 
         if is_maximizing:
-            player = self
-        else:
-            if self == board.player1:
-                player = board.player2
-            else:
-                player = board.player1
-
-        board_copy = copy.deepcopy(board)
-
-        if is_maximizing:
-            # Maximazing player
+            # Maximizing player
             v = -float('inf')
-            for move in board_copy.available_moves(player):
-                # board_copy = copy.deepcopy(board)
-                board_copy.make_move_player1(move[0], move[1])
-                v = max(v, self.minimax(board_copy, not is_maximizing, max_level, a, b, level + 1))
+            for move in board_clone.available_moves(player):
+                board_clone.make_move(move[0], move[1], player)
+                v = max(v, self.minimax(board_clone, not is_maximizing, a, b, level + 1))
                 a = max(a, v)
                 if b <= a:
                     break
@@ -79,10 +74,9 @@ class AgentMinimax(Player):
         else:
             # Minimizing player
             v = float('inf')
-            for move in board_copy.available_moves(player):
-                # board_copy = copy.deepcopy(board)
-                board_copy.make_move_player2(move[0], move[1])
-                v = min(v, self.minimax(board_copy, not is_maximizing, max_level, a, b, level + 1))
+            for move in board_clone.available_moves(opponent):
+                board_clone.make_move(move[0], move[1], opponent)
+                v = min(v, self.minimax(board_clone, not is_maximizing, a, b, level + 1))
                 b = min(b, v)
                 if b <= a:
                     break

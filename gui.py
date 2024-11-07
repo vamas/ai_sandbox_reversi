@@ -45,14 +45,12 @@ class GUI:
         board = self.game.get_board()
         for row in range(board.grid_shape()):
             for col in range(board.grid_shape()):
-                if isinstance(board.grid[row][col], Player) == True \
-                              and board.grid[row][col].get_color() == 1:  # Black piece
+                if board.grid[row][col] == 1:
                     pygame.draw.circle(screen, BLACK,
                                        (col * self.cell_size + self.cell_size // 2,
                                         row * self.cell_size + self.cell_size // 2),
                                        self.cell_size // 2 - 5)
-                elif isinstance(board.grid[row][col], Player) == True \
-                                and board.grid[row][col].get_color() == -1:  # White piece
+                elif board.grid[row][col] == -1:
                     pygame.draw.circle(screen, WHITE,
                                        (col * self.cell_size + self.cell_size // 2,
                                         row * self.cell_size + self.cell_size // 2),
@@ -62,7 +60,7 @@ class GUI:
         board = self.game.get_board()
         col = pos[0] // self.cell_size
         row = pos[1] // self.cell_size
-        return board.make_move(row, col, self.game.current_player)
+        return self.game.play_turn(row, col)
 
     # Function to render text
     def render_text(self, text, position):
@@ -82,15 +80,13 @@ class GUI:
 
         # Render variables (score and player turn in this case)
         score_text = font.render(f"Score: {score}", True, (255, 255, 255))
-        player_turn_text = font.render(f"Turn: {self.game.current_player.color_name}", True, (255, 255, 255))
-        if self.game.get_winner():
-            winner_text = font.render(f"Winner: {self.game.get_winner().color_name}", True,(255, 255, 255))
+        player_turn_text = font.render(f"Turn: {self.game.current_player.name}", True, (255, 255, 255))
+        winner_text = font.render(f"Winner: {self.game.get_winner_name()}", True,(255, 255, 255))
 
         # Blit the text onto the screen in the footer area
         screen.blit(score_text, (10, WINDOW_SIZE + 10))
         screen.blit(player_turn_text, (200, WINDOW_SIZE + 10))
-        if self.game.get_winner():
-            screen.blit(winner_text, (10, WINDOW_SIZE + 30))
+        screen.blit(winner_text, (10, WINDOW_SIZE + 30))
 
     def run(self):
         """Main loop to run the game with a graphical interface."""
@@ -105,35 +101,22 @@ class GUI:
                 if self.game.current_player.is_human:
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         # Handle the click for the current player
-                        if self.handle_click(pygame.mouse.get_pos()):
-                            # Switch players if the move is valid
-                            self.game.switch_turn()
+                        self.handle_click(pygame.mouse.get_pos())
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_SPACE:
-                            self.game.switch_turn()
+                            self.game.skip_turn()
 
             # Computer agent move
             if not self.game.current_player.is_human:
-                # if self.game.current_player.make_move(self.game.board):
-                self.game.current_player.make_move(self.game.board)
-                self.game.switch_turn()
+                self.game.play_agent_turn()
 
             # Draw the board and pieces
             self.draw_board()
             self.draw_pieces()
             self.render_footer()
 
-            # Display the current turn and scores
-            # self.render_text(f"Current Turn: {self.game.current_player.color_name}", (10, 10))
-            # self.render_text(f"Black Score: {black_score}", (10, 50))
-            # self.render_text(f"White Score: {white_score}", (10, 90))
-
             # Update the display
             pygame.display.flip()
-
-        # Display the result when the game is over
-        # self.render_text(f"Winner: {self.game.get_winner()}", (10, 10))
-        # self.render_text(f"Press any key to continue", (130, 10))
 
         self.render_footer()
         pygame.display.flip()

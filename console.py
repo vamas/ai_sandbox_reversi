@@ -1,3 +1,4 @@
+import time
 
 class Console:
     def __init__(self, game):
@@ -20,15 +21,20 @@ class Console:
                 print("Invalid input. Please enter numbers.")
 
     def run(self):
+        time_taken = {self.game.player1.name: 0, self.game.player2.name: 0}
         while not self.game.is_game_over():
             if self.game.current_player.is_human:
                 move = self.get_user_move(self.game.current_player)
                 if not move is None:
-                    self.game.board.make_move(move[0], move[1], self.game.current_player)
+                    self.game.play_turn(move[0], move[1])
                 self.game.switch_turn()
             else:
-                self.game.current_player.make_move(self.game.board)
-                self.game.switch_turn()
+                start_time = time.time()
+                current_player = self.game.current_player.name
+                self.game.play_agent_turn()
+                end_time = time.time()
+                execution_time = end_time - start_time
+                time_taken[current_player] += execution_time
 
         # print("Winner is: ", self.game.get_winner())
-        return self.game.get_winner()
+        return self.game.get_winner_name(), time_taken

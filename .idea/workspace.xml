@@ -4,21 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c8d76867-fb7b-4a26-8647-8f21752bc4ef" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/Reversi.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/agent_minimax.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/agent_random.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/board.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/console.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/game.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/player.py" afterDir="false" />
+    <list default="true" id="c8d76867-fb7b-4a26-8647-8f21752bc4ef" name="Changes" comment="init">
+      <change afterPath="$PROJECT_DIR$/agent_minimax_depth_10.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/agent_minimax_depth_3.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/agent_minimax_depth_3_custom_heuristic.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/agent_minimax_depth_5.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent_minimax.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent_minimax.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent_random.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent_random.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/board.py" beforeDir="false" afterPath="$PROJECT_DIR$/board.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/console.py" beforeDir="false" afterPath="$PROJECT_DIR$/console.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/player.py" beforeDir="false" afterPath="$PROJECT_DIR$/player.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,25 +34,25 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="2nGlf3jNuBjDn6KFaWqwvQ5Qf5n" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python tests.Unittests in test.py.executor": "Run",
-    "Python tests.pytest in /Reversi.executor": "Run",
-    "Python.main.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/Users/valm/MyProjects/AI/Reversi"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python tests.Unittests in test.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest in /Reversi.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/valm/MyProjects/AI/Reversi&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -120,6 +119,15 @@
       <option name="presentableId" value="Default" />
       <updated>1728607393160</updated>
     </task>
+    <task id="LOCAL-00001" summary="init">
+      <option name="closed" value="true" />
+      <created>1728853771183</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1728853771183</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -133,20 +141,28 @@
       </map>
     </option>
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="init" />
+    <option name="LAST_COMMIT_MESSAGE" value="init" />
+  </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="self" language="Python" />
-        <watch expression="board.available_moves_player1()" language="Python" />
-        <watch expression="self.get_available_moves(board)" language="Python" />
-        <watch expression="(dr,dc)" language="Python" />
-        <watch expression="pieces_to_flip" language="Python" />
-        <watch expression="board.available_moves(player)" language="Python" />
-        <watch expression="(row,col)" language="Python" />
-        <watch expression="board_copy.available_moves(player)" language="Python" />
-        <watch expression="self.grid" language="Python" />
-        <watch expression="self.player1" language="Python" />
-        <watch expression="self.player2" language="Python" />
+        <watch expression="board.available_moves(self.code_value)" language="Python" />
+        <watch expression="self.terminal_test(board)" language="Python" />
+        <watch expression="self.order_moves(board.available_moves(self.code_value))" language="Python" />
+        <watch expression="self.terminal_test(board)" language="Python" />
+        <watch expression="board.available_moves(self.code_value)" language="Python" />
       </configuration>
     </watches-manager>
   </component>
