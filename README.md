@@ -30,4 +30,4 @@ python main.py
 ```
 
 ## Credits
-Special thanks to [@OttoBotCode]([https://github.com/OttoBotCode](https://www.youtube.com/@OttoBotCode)) for inspiration and guidance during the initial stages of this project.
+Special thanks to    [@OttoBotCode](https://www.youtube.com/@OttoBotCode) for inspiration and guidance during the initial stages of this project.
