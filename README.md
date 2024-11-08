@@ -27,3 +27,6 @@ This project is an AI sandbox for the game Reversi (also known as Othello). It i
 To run the game with a manual agent and a random agent, execute the following command:
 ```sh
 python main.py
+
+## Credits
+Special thanks to [@OttoBotCode]([https://github.com/OttoBotCode](https://www.youtube.com/@OttoBotCode)) for inspiration and guidance during the initial stages of this project.
