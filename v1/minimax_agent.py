@@ -1,6 +1,7 @@
 import random
 from v1.agent import Agent, AgentType
 from v1.player import opponent
+from v1.position import SkipPosition
 
 
 class MinimaxAgent(Agent):
@@ -10,7 +11,7 @@ class MinimaxAgent(Agent):
 
     def get_best_move(self, game_state):
         best_score = -float('inf')
-        best_move = None
+        best_move = SkipPosition()
         available_moves = game_state.legal_moves.keys()
         if len(available_moves) == 1:
             return list(available_moves)[0]

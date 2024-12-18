@@ -8,22 +8,6 @@ class GameManager:
     def __init__(self, agent_black, agent_white):
         self.game_state = GameState()
         self.agents = {Player.BLACK: agent_black, Player.WHITE: agent_white}
-        # board = [[Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK,
-        #   Player.BLACK],
-        #  [Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK,
-        #   Player.BLACK],
-        #  [Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK,
-        #   Player.BLACK],
-        #  [Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK,
-        #   Player.BLACK],
-        #  [Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.NONE, Player.NONE],
-        #  [Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK,
-        #   Player.NONE],
-        #  [Player.BLACK, Player.BLACK, Player.BLACK, Player.BLACK, Player.NONE, Player.NONE, Player.NONE, Player.NONE],
-        #  [Player.WHITE, Player.NONE, Player.BLACK, Player.BLACK, Player.NONE, Player.NONE, Player.NONE, Player.NONE]]
-        # self.game_state = GameState(board=board, current_player=Player.BLACK)
-        # self.agents = {Player.BLACK: agent_black, Player.WHITE: agent_white}
-
 
     def get_user_move(self):
         while True:
@@ -53,7 +37,7 @@ class GameManager:
                 move = self.agents[self.game_state.current_player].get_best_move(self.game_state)
                 move_info = self.game_state.make_move(move)
 
-        # print("Winner is: ", self.game.get_winner())
+        print("Winner is: ", self.game_state.winner)
         return self.game_state.winner
 
     def print_board(self):

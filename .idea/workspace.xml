@@ -5,29 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c8d76867-fb7b-4a26-8647-8f21752bc4ef" name="Changes" comment="init">
-      <change afterPath="$PROJECT_DIR$/v1/agent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/gamemanager_console.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/gamemanager_gui.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/gamestate.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/manual_agent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/minimax_agent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/moveinfo.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/player.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/position.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/v1/random_agent.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/dqn.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/dqn_agent.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/dqn_replaybuffer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/dqn_train.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_agent.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_agent_double.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_double.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_single.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_train.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_minimax.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_minimax_depth_10.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_minimax_depth_3.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_minimax_depth_3_custom_heuristic.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_minimax_depth_5.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_random.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/board.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/console.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/game.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/player.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/gamemanager_console.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/gamemanager_console.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/gamestate.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/gamestate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/minimax_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/minimax_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/player.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/player.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/position.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/position.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/random_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/random_agent.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,16 +53,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python tests.Unittests in test.py.executor": "Run",
-    "Python tests.pytest in /Reversi.executor": "Run",
-    "Python.main.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "feat__new__design",
-    "last_opened_file_path": "/Users/valm/MyProjects/AI/Reversi/v1"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python tests.Unittests in test.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest in /Reversi.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feat__new__design&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/valm/MyProjects/AI/Reversi/v1&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/v1" />
@@ -122,7 +117,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-0e3be3396995-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23339.19" />
+        <option value="bundled-python-sdk-d7ad00fb9fc3-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23726.102" />
       </set>
     </attachedChunks>
   </component>
@@ -151,7 +146,15 @@
       <option name="project" value="LOCAL" />
       <updated>1731011589000</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="init">
+      <option name="closed" value="true" />
+      <created>1731103736306</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1731103736306</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -159,7 +162,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="feat_new_design" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -171,6 +186,13 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/v1/qtable_double.py</url>
+          <line>74</line>
+          <option name="timeStamp" value="125" />
+        </line-breakpoint>
+      </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
           <properties notifyOnTerminate="true" exception="BaseException">
@@ -179,12 +201,5 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
-    <watches-manager>
-      <configuration name="PythonConfigurationType">
-        <watch expression="self.agents[self.game_state.current_player].agent_type" language="Python" />
-        <watch expression="AgentType.COMPUTER" language="Python" />
-        <watch expression="self.legal_moves" language="Python" />
-      </configuration>
-    </watches-manager>
   </component>
 </project>

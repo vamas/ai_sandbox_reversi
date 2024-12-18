@@ -11,6 +11,12 @@ class Player(Enum):
     def __hash__(self):
         return hash(self.value)
 
+    def __str__(self):
+        if self == Player.BLACK:
+            return "BLACK"
+        else:
+            return "WHITE"
+
 
 def opponent(player):
     if player == Player.BLACK:

@@ -1,14 +1,34 @@
 from enum import Enum
 from collections import defaultdict
 
+import numpy as np
+
 from v1.player import Player
 from v1.player import opponent
-from v1.position import Position
+from v1.position import Position, SkipPosition
 from v1.moveinfo import MoveInfo
 
+BOARD_SHAPE = 8
+
+Mid1 = (3, 3)
+Mid2 = (4, 4)
+Mid3 = (3, 4)
+Mid4 = (4, 3)
+
+# Mid1 = (2, 1)
+# Mid2 = (1, 2)
+# Mid3 = (2, 2)
+# Mid4 = (1, 1)
+
+
+def print_board(game_state):
+    for row in game_state.board:
+        print(' '.join('B' if cell == Player.BLACK else 'W' if cell == Player.WHITE else '.' for cell in row))
+    print("\n")
+
 class GameState:
-    Rows = 8
-    Cols = 8
+    Rows = BOARD_SHAPE
+    Cols = BOARD_SHAPE
 
     def __init__(self, board=None, current_player=Player.BLACK):
         if board is None:
@@ -30,10 +50,10 @@ class GameState:
 
     def init_normal_game(self):
         self.board = [[Player.NONE for _ in range(self.Cols)] for _ in range(self.Rows)]
-        self.board[3][3] = Player.BLACK
-        self.board[4][4] = Player.BLACK
-        self.board[3][4] = Player.WHITE
-        self.board[4][3] = Player.WHITE
+        self.board[Mid1[0]][Mid1[1]] = Player.BLACK
+        self.board[Mid2[0]][Mid2[1]] = Player.BLACK
+        self.board[Mid3[0]][Mid3[1]] = Player.WHITE
+        self.board[Mid4[0]][Mid4[1]] = Player.WHITE
         self.piece_count = {Player.BLACK: 2, Player.WHITE: 2}
         self.current_player = Player.BLACK
         self.game_over = False
@@ -41,28 +61,59 @@ class GameState:
         self.legal_moves = {}
         self.update_legal_moves()
 
+    def hash_float32(self):
+        hash_value = 0
+        for row in range(self.Rows):
+            for col in range(self.Cols):
+                if self.board[row][col] != Player.NONE:
+                    hash_value = hash_value * 3 + (1 if self.board[row][col] == Player.BLACK else 2)
+        return np.float32(hash_value)
+
+    def reverse_hash_float32(self, hash_value):
+        hash_value = int(hash_value)
+        board = [[Player.NONE for _ in range(self.Cols)] for _ in range(self.Rows)]
+        for row in range(self.Rows - 1, -1, -1):
+            for col in range(self.Cols - 1, -1, -1):
+                if hash_value == 0:
+                    return board
+                value = hash_value % 3
+                hash_value //= 3
+                if value == 1:
+                    board[row][col] = Player.BLACK
+                elif value == 2:
+                    board[row][col] = Player.WHITE
+        return board
+
+
     def hash(self):
         hash_value = 17
-        hash_value = hash_value * 31 + hash(self.current_player)
-        hash_value = hash_value * 31 + hash(self.game_over)
-        hash_value = hash_value * 31 + hash(self.winner)
-        hash_value = hash_value * 31 + hash(self.turn_count)
-        hash_value = hash_value * 31 + hash(self.double_skip_turns)
-
-        for player, count in self.piece_count.items():
-            hash_value = hash_value * 31 + hash(player)
-            hash_value = hash_value * 31 + hash(count)
-
-        for pos, flips in self.legal_moves.items():
-            hash_value = hash_value * 31 + hash(pos)
-            for flip in flips:
-                hash_value = hash_value * 31 + hash(flip)
-
-        for row in self.board:
-            for cell in row:
-                hash_value = hash_value * 31 + hash(cell)
-
+        for row in range(self.Rows):
+            for col in range(self.Cols):
+                if self.board[row][col] != Player.NONE:
+                    hash_value = hash_value * 31 + hash((row, col, self.board[row][col]))
         return str(hash_value)
+
+        # hash_value = 17
+        # hash_value = hash_value * 31 + hash(self.current_player)
+        # hash_value = hash_value * 31 + hash(self.game_over)
+        # hash_value = hash_value * 31 + hash(self.winner)
+        # hash_value = hash_value * 31 + hash(self.turn_count)
+        # hash_value = hash_value * 31 + hash(self.double_skip_turns)
+        #
+        # for player, count in self.piece_count.items():
+        #     hash_value = hash_value * 31 + hash(player)
+        #     hash_value = hash_value * 31 + hash(count)
+        #
+        # for pos, flips in self.legal_moves.items():
+        #     hash_value = hash_value * 31 + hash(pos)
+        #     for flip in flips:
+        #         hash_value = hash_value * 31 + hash(flip)
+        #
+        # for row in self.board:
+        #     for cell in row:
+        #         hash_value = hash_value * 31 + hash(cell)
+        #
+        # return str(hash_value)
 
 
     def clone(self):
@@ -80,11 +131,11 @@ class GameState:
     def make_move(self, pos):
         moving_player = self.current_player
 
-        if pos is None:
+        if isinstance(pos, SkipPosition) or pos is None:
             self.double_skip_turns += 1
             self.check_winner()
             self.change_player()
-            return MoveInfo(moving_player, None, [])
+            return MoveInfo(moving_player, pos, [])
 
         self.double_skip_turns = 0
         flips = self.legal_moves[pos]
@@ -161,7 +212,15 @@ class GameState:
                     flips = self.get_flips(pos, self.current_player)
                     if flips:
                         self.legal_moves[pos] = flips
+        if not self.legal_moves:
+            self.legal_moves = {SkipPosition(): []}
         return self.legal_moves
 
     def grid_shape(self):
         return self.Rows
+
+    def lookup_legal_action(self, action):
+        for key in self.legal_moves.keys():
+            if key == action:
+                return key
+        return None
