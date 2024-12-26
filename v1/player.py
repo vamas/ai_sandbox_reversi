@@ -14,8 +14,9 @@ class Player(Enum):
     def __str__(self):
         if self == Player.BLACK:
             return "BLACK"
-        else:
+        elif self == Player.WHITE:
             return "WHITE"
+        return "DRAW"
 
 
 def opponent(player):

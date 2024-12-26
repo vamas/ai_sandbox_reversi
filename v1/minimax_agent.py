@@ -69,6 +69,9 @@ class MinimaxAgent(Agent):
         else:
             return -1
 
+    # def heuristic_fn(self, game_state):
+    #     return 0
+
     def heuristic_fn(self, game_state):
         pieces_count = game_state.piece_count
         player_count = pieces_count[game_state.current_player]
