@@ -99,115 +99,61 @@ if __name__ == "__main__":
     # print(f"WHITE wins: ", wins[Player.WHITE])
     # print(f"BLACK wins: ", wins[Player.BLACK])
 
+    total_games_ar = [10000, 20000, 30000, 40000, 50000]
     iterations = 1
     learning_rate_ratio = 20
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.5
-    total_games = 30000
     enhancement_epsilon = 0.3
-    learning_rate = total_games / 1000000 / learning_rate_ratio
     b_performance = []
-    for i in range(iterations):
+    for total_games in total_games_ar:
+        learning_rate = total_games / 1000000 / learning_rate_ratio
+        print("Create baseline models. BLACK {}".format(total_games))
+        # Initialize the model for an 8x8 Othello board black
+        training = DQNTrain(total_games=total_games,
+                               epsilon=epsilon,
+                               learning_rate=learning_rate,
+                               discount_factor=discount_factor,
+                               train_agent=RandomAgent(Player.BLACK),
+                               opponent_agent=RandomAgent(Player.WHITE),
+                               reward_decay=reward_decay)
+        model_black = training.train_dqn()
+        # training.print_stats()
+        # Save the model
+        torch.save(model_black, "dqn_black_model_full_{}.pth".format(total_games))
 
-        # print("Create baseline models")
-        # # Initialize the model for an 8x8 Othello board black
-        # training = DQNTrain(total_games=total_games,
-        #                        epsilon=epsilon,
-        #                        learning_rate=learning_rate,
-        #                        discount_factor=discount_factor,
-        #                        train_agent=RandomAgent(Player.BLACK),
-        #                        opponent_agent=RandomAgent(Player.WHITE),
-        #                        reward_decay=reward_decay)
-        # model_black = training.train_dqn()
-        # # training.print_stats()
-        # # Save the model
-        # torch.save(model_black, "dqn_black_model_full.pth")
-        #
-        # # Initialize the model for an 8x8 Othello board white
-        # training = DQNTrain(total_games=total_games,
-        #                     epsilon=epsilon,
-        #                     learning_rate=learning_rate,
-        #                     discount_factor=discount_factor,
-        #                     train_agent=RandomAgent(Player.WHITE),
-        #                     opponent_agent=RandomAgent(Player.BLACK),
-        #                     reward_decay=reward_decay)
-        # model_black = training.train_dqn()
-        # # training.print_stats()
-        # # Save the model.
-        # torch.save(model_black, "dqn_white_model_full.pth")
-
-        # # Enhance with Minimax-3
-        # model_black = torch.load("dqn_black_model_full.pth")
-        # model_white = torch.load("dqn_white_model_full.pth")
-        # training = DQNTrain(total_games=total_games,
-        #                     epsilon=enhancement_epsilon,
-        #                     learning_rate=learning_rate,
-        #                     discount_factor=discount_factor,
-        #                     train_agent=RandomAgent(Player.BLACK),
-        #                     opponent_agent=MinimaxAgent(Player.WHITE, 3),
-        #                     reward_decay=reward_decay,
-        #                     model = model_black)
-        # model = training.train_dqn()
-        # torch.save(model, "dqn_black_model_full.pth")
-        #
-        # training = DQNTrain(total_games=total_games,
-        #                     epsilon=enhancement_epsilon,
-        #                     learning_rate=learning_rate,
-        #                     discount_factor=discount_factor,
-        #                     train_agent=RandomAgent(Player.WHITE),
-        #                     opponent_agent=MinimaxAgent(Player.BLACK, 3),
-        #                     reward_decay=reward_decay,
-        #                     model = model_white)
-        # model = training.train_dqn()
-        # torch.save(model, "dqn_white_model_full.pth")
+        # Initialize the model for an 8x8 Othello board white
+        print("Create baseline models. WHITE {}".format(total_games))
+        training = DQNTrain(total_games=total_games,
+                            epsilon=epsilon,
+                            learning_rate=learning_rate,
+                            discount_factor=discount_factor,
+                            train_agent=RandomAgent(Player.WHITE),
+                            opponent_agent=RandomAgent(Player.BLACK),
+                            reward_decay=reward_decay)
+        model_white = training.train_dqn()
+        # training.print_stats()
+        # Save the model.
+        torch.save(model_white, "dqn_white_model_full_{}.pth".format(total_games))
 
 
-        # Enhance with against DQN opponents
 
-        # for iteration in range(3):
-        #
-        #     model_black = torch.load("dqn_black_model_full.pth")
-        #     model_white = torch.load("dqn_white_model_full.pth")
-        #
-        #     training = DQNTrain(total_games=total_games,
-        #                         epsilon=enhancement_epsilon,
-        #                         learning_rate=learning_rate,
-        #                         discount_factor=discount_factor,
-        #                         train_agent=RandomAgent(Player.BLACK),
-        #                         opponent_agent=DQNAgent(Player.WHITE, model_white),
-        #                         reward_decay=reward_decay,
-        #                         model = model_black)
-        #     model = training.train_dqn()
-        #     torch.save(model, "dqn_black_model_full.pth")
-        #
-        #     training = DQNTrain(total_games=total_games,
-        #                         epsilon=enhancement_epsilon,
-        #                         learning_rate=learning_rate,
-        #                         discount_factor=discount_factor,
-        #                         train_agent=RandomAgent(Player.WHITE),
-        #                         opponent_agent=DQNAgent(Player.BLACK, model_black),
-        #                         reward_decay=reward_decay,
-        #                         model=model_white)
-        #     model = training.train_dqn()
-        #     torch.save(model, "dqn_white_model_full.pth")
-
-
-        black_model = torch.load("dqn_black_model_full_20000.pth")
-        white_model = torch.load("dqn_white_model_full_30000.pth")
-        black = DQNAgent(Player.BLACK, black_model)
-        white = DQNAgent(Player.WHITE, white_model)
-        # black = MinimaxAgent(Player.BLACK, 3)
-        # white = RandomAgent(Player.WHITE)
-        # white = MinimaxAgent(Player.WHITE, 3)
-        wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
-        for i in tqdm(range(games), desc="Playing games"):
-            game_manager = GameManager(black, white)
-            winner = game_manager.run()
-            wins[winner] += 1
-        print(f"WHITE wins: ", wins[Player.WHITE])
-        print(f"BLACK wins: ", wins[Player.BLACK])
-        b_performance.append(wins[Player.BLACK]/games)
+    black_model = torch.load("dqn_black_model_full_30000.pth")
+    white_model = torch.load("dqn_white_model_full_10000.pth")
+    black = DQNAgent(Player.BLACK, black_model)
+    white = DQNAgent(Player.WHITE, white_model)
+    # black = MinimaxAgent(Player.BLACK, 3)
+    # white = RandomAgent(Player.WHITE)
+    # white = MinimaxAgent(Player.WHITE, 3)
+    wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
+    for i in tqdm(range(games), desc="Playing games"):
+        game_manager = GameManager(black, white)
+        winner = game_manager.run()
+        wins[winner] += 1
+    print(f"WHITE wins: ", wins[Player.WHITE])
+    print(f"BLACK wins: ", wins[Player.BLACK])
+    b_performance.append(wins[Player.BLACK]/games)
 
     print("=============================================================")
     print(b_performance)
