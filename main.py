@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # print(f"WHITE wins: ", wins[Player.WHITE])
     # print(f"BLACK wins: ", wins[Player.BLACK])
 
-    total_games_ar = [10000, 20000, 30000, 40000, 50000]
+    total_games_ar = [30000]
     iterations = 1
     learning_rate_ratio = 20
     epsilon = 1.0
@@ -109,19 +109,19 @@ if __name__ == "__main__":
     b_performance = []
     for total_games in total_games_ar:
         learning_rate = total_games / 1000000 / learning_rate_ratio
-        print("Create baseline models. BLACK {}".format(total_games))
-        # Initialize the model for an 8x8 Othello board black
-        training = DQNTrain(total_games=total_games,
-                               epsilon=epsilon,
-                               learning_rate=learning_rate,
-                               discount_factor=discount_factor,
-                               train_agent=RandomAgent(Player.BLACK),
-                               opponent_agent=RandomAgent(Player.WHITE),
-                               reward_decay=reward_decay)
-        model_black = training.train_dqn()
-        # training.print_stats()
-        # Save the model
-        torch.save(model_black, "dqn_black_model_full_{}.pth".format(total_games))
+        # print("Create baseline models. BLACK {}".format(total_games))
+        # # Initialize the model for an 8x8 Othello board black
+        # training = DQNTrain(total_games=total_games,
+        #                        epsilon=epsilon,
+        #                        learning_rate=learning_rate,
+        #                        discount_factor=discount_factor,
+        #                        train_agent=RandomAgent(Player.BLACK),
+        #                        opponent_agent=RandomAgent(Player.WHITE),
+        #                        reward_decay=reward_decay)
+        # model_black = training.train_dqn()
+        # # training.print_stats()
+        # # Save the model
+        # torch.save(model_black, "dqn_black_model_full_{}.pth".format(total_games))
 
         # Initialize the model for an 8x8 Othello board white
         print("Create baseline models. WHITE {}".format(total_games))
