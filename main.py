@@ -22,7 +22,7 @@ from v1.gamemanager_console import GameManager
 
 DEFAULT_Q_VALUE = 0.0
 
-games = 5
+games = 1
 if __name__ == "__main__":
 
     # black = MinimaxAgent(Player.BLACK, 2)
@@ -99,13 +99,12 @@ if __name__ == "__main__":
     # print(f"WHITE wins: ", wins[Player.WHITE])
     # print(f"BLACK wins: ", wins[Player.BLACK])
 
-    total_games_ar = [30000]
+    total_games_ar = [10000]
     iterations = 1
     learning_rate_ratio = 20
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.5
-    enhancement_epsilon = 0.3
     b_performance = []
     for total_games in total_games_ar:
         learning_rate = total_games / 1000000 / learning_rate_ratio
@@ -119,9 +118,9 @@ if __name__ == "__main__":
         #                        opponent_agent=RandomAgent(Player.WHITE),
         #                        reward_decay=reward_decay)
         # model_black = training.train_dqn()
-        # # training.print_stats()
+        # training.print_stats()
         # # Save the model
-        # torch.save(model_black, "dqn_black_model_full_{}.pth".format(total_games))
+        # torch.save(model_black, "dqn_black_model_full_{}_plus.pth".format(total_games))
 
         # Initialize the model for an 8x8 Othello board white
         print("Create baseline models. WHITE {}".format(total_games))
@@ -133,14 +132,14 @@ if __name__ == "__main__":
                             opponent_agent=RandomAgent(Player.BLACK),
                             reward_decay=reward_decay)
         model_white = training.train_dqn()
-        # training.print_stats()
+        training.print_stats()
         # Save the model.
-        torch.save(model_white, "dqn_white_model_full_{}.pth".format(total_games))
+        torch.save(model_white, "dqn_white_model_full_{}_plus.pth".format(total_games))
 
 
 
-    black_model = torch.load("dqn_black_model_full_30000.pth")
-    white_model = torch.load("dqn_white_model_full_10000.pth")
+    black_model = torch.load("dqn_black_model_full_10000_plus.pth")
+    white_model = torch.load("dqn_white_model_full_10000_plus.pth")
     black = DQNAgent(Player.BLACK, black_model)
     white = DQNAgent(Player.WHITE, white_model)
     # black = MinimaxAgent(Player.BLACK, 3)

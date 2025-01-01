@@ -190,6 +190,9 @@ class DQNTrain:
                 winner = self.play_episode(game_episode_state, game_history)
                 self.add_to_replay_buffer(game_history, self.game_result_reward(winner))
 
+
+
+
     def play_episode(self, game_state, game_history):
         """
             Play an episode of the game till the end.
@@ -200,13 +203,13 @@ class DQNTrain:
             Player: The winner of the game
         """
         while not game_state.game_over:
-            move = self.agents[game_state.current_player].get_best_move(game_state)
+            # move = self.agents[game_state.current_player].get_best_move(game_state)
             if game_state.current_player == self.train_agent.player:
-                move = self.choose_action(game_state, override_exploration=True)
+                move = self.choose_action(game_state, override_exploration=False)
                 move_info = game_state.make_move(move)
                 game_history.append((move_info, game_state.clone()))
             else:
-                # move = self.agents[game_state.current_player].get_best_move(game_state)
+                move = self.agents[game_state.current_player].get_best_move(game_state)
                 game_state.make_move(move)
         self.episode += 1
         # self.print_board(game_state)
