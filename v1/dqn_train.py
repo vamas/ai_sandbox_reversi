@@ -103,7 +103,7 @@ class DQNTrain:
         self.optimizer =None
         self.loss_fn = None
         self.target_model = None
-        self.target_update_freq = 1000
+        self.target_update_freq = 1000. # Update target q-network every other 1000 steps (played games)
         self.replay_buffer = None
         self.epoch_q_value_changes = []
         self.is_exploration = True
@@ -160,7 +160,10 @@ class DQNTrain:
                 self.play_game()
                 self.update_epsilon_boltzmann(game)
                 if not self.is_exploration:
-                    if len(self.replay_buffer) > self.batch_size:
+                    # if len(self.replay_buffer) > self.batch_size:
+                    #     self.train_model(self.replay_buffer)
+                    if self.replay_buffer.is_buffer_ready:
+                        print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.data_points))
                         self.train_model(self.replay_buffer)
                     if game % self.target_update_freq == 0:
                         self.target_model.load_state_dict(self.model.state_dict())
@@ -295,6 +298,7 @@ class DQNTrain:
         Args:
             replay_buffer:
         """
+        print("Training model")
 
         # Sample minibatch
         states, actions, rewards, next_states, dones = replay_buffer.sample(self.batch_size)

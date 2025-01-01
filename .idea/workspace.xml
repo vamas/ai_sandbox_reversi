@@ -5,10 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c8d76867-fb7b-4a26-8647-8f21752bc4ef" name="Changes" comment="update">
-      <change beforePath="$PROJECT_DIR$/.idea/Reversi.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Reversi.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/dqn_replaybuffer.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/dqn_replaybuffer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/v1/dqn_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/dqn_train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -185,7 +184,15 @@
       <option name="project" value="LOCAL" />
       <updated>1735268934368</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="update">
+      <option name="closed" value="true" />
+      <created>1735745425400</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1735745425400</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
