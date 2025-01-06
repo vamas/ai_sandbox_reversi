@@ -19,7 +19,7 @@ WIN_VALUE = 1.0
 DRAW_VALUE = 0.0
 LOSS_VALUE = -1.0
 
-DEFAULT_Q_VALUE = -1.0
+DEFAULT_Q_VALUE = 1.0
 
 BOARD_SHAPE = 8
 
@@ -157,7 +157,7 @@ class DQNTrain:
             self.avg_q_values = []
             for game in range(self.total_games):
                 print("Game/Total games {}/{}".format(game + 1, self.total_games))
-                self.play_game()
+                self.play_single_game()
                 self.update_epsilon_boltzmann(game)
                 if not self.is_exploration:
                     # if len(self.replay_buffer) > self.batch_size:
@@ -193,8 +193,20 @@ class DQNTrain:
                 winner = self.play_episode(game_episode_state, game_history)
                 self.add_to_replay_buffer(game_history, self.game_result_reward(winner))
 
-
-
+    def play_single_game(self):
+        """
+        Play a game of Othello
+        When playing a game we make first exploration/exploitation move
+        and then finish up episode playing according to the training player
+        and opponent strategies
+        """
+        game_state = GameState()
+        game_history = []  # List of (move_info, game_state) tuples
+        while not game_state.game_over:
+            game_state, move_info = self.make_training_move(game_state)
+            game_history.append((move_info, game_state))
+            winner = self.play_episode(game_state, game_history)
+            self.add_to_replay_buffer(game_history, self.game_result_reward(winner))
 
     def play_episode(self, game_state, game_history):
         """
@@ -248,8 +260,6 @@ class DQNTrain:
         Return:
             (game state before the move, move_info): game state before the move and the move information
         """
-
-
         move_info = None
         game_state_before = None
         for i in range(2):

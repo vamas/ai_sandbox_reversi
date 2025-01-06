@@ -14,6 +14,12 @@ class SingleQTable(QTable):
     def qtable_to_write(self):
         return self.qtable
 
+    def start(self):
+        pass
+
+    def finalize(self):
+        pass
+
     def get_q_value(self, state, action):
         if state not in self.qtable_to_read:
             self.qtable[state] = {}

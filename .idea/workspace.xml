@@ -5,10 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c8d76867-fb7b-4a26-8647-8f21752bc4ef" name="Changes" comment="update">
+      <change afterPath="$PROJECT_DIR$/testing_dqn.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_single_db.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/v1/qtable_single_db_plus.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visual_training_dqn.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visual_training_qtable.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/v1/dqn_replaybuffer.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/dqn_replaybuffer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/v1/dqn_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/dqn_train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/qtable.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/qtable.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/qtable_single.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/qtable_single.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/v1/qtable_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/v1/qtable_train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,19 +63,24 @@
     "Python tests.Unittests in test.py.executor": "Run",
     "Python tests.pytest in /Reversi.executor": "Run",
     "Python.main.executor": "Run",
+    "Python.testing_dqn.executor": "Run",
+    "Python.visual_training_dqn.executor": "Run",
+    "Python.visual_training_qtable.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "feat__new__design",
-    "last_opened_file_path": "/Users/valm/MyProjects/AI/Reversi/v1"
+    "last_opened_file_path": "C:/CodeRepo/AI/ai_sandbox_reversi/v1"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\CodeRepo\AI\ai_sandbox_reversi\v1" />
+      <recent name="C:\CodeRepo\AI\ai_sandbox_reversi" />
       <recent name="$PROJECT_DIR$/v1" />
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.main">
+  <component name="RunManager" selected="Python.visual_training_qtable">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="Reversi" />
       <option name="ENV_FILES" value="" />
@@ -83,6 +95,72 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="testing_dqn" type="PythonConfigurationType" factoryName="Python">
+      <module name="Reversi" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/testing_dqn.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="visual_training_dqn" type="PythonConfigurationType" factoryName="Python">
+      <module name="Reversi" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visual_training_dqn.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="visual_training_qtable" type="PythonConfigurationType" factoryName="Python">
+      <module name="Reversi" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visual_training_qtable.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -108,6 +186,9 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.visual_training_dqn" />
+      <item itemvalue="Python.visual_training_qtable" />
+      <item itemvalue="Python.testing_dqn" />
       <item itemvalue="Python.main" />
       <item itemvalue="Python tests.Unittests in test.py" />
     </list>
@@ -115,7 +196,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-1b1018131e27-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.22562.180" />
+        <option value="bundled-python-sdk-495700d161d3-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.22562.220" />
       </set>
     </attachedChunks>
   </component>

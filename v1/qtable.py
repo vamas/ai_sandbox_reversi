@@ -44,3 +44,11 @@ class QTable(ABC):
     @abstractmethod
     def get_max_q_value(self, state):
         pass
+
+    @abstractmethod
+    def start(self):
+        pass
+
+    @abstractmethod
+    def finalize(self):
+        pass
