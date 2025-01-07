@@ -34,3 +34,7 @@ class ReplayBuffer:
 
     def __len__(self):
         return len(self.buffer)
+
+    def release_buffer(self):
+        self._is_buffer_ready = False
+        self._push_counter = 0

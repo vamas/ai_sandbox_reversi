@@ -1,4 +1,5 @@
 import os
+import pickle
 import sys
 import torch
 
@@ -15,19 +16,22 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-games = 1
+games = 10
 if __name__ == "__main__":
 
-    training = QTableTrain(total_games=100,
+    training = QTableTrain(total_games=10000,
                            epsilon=0.9,
                            learning_rate=0.1,
                            discount_factor=0.5,
                            train_agent=RandomAgent(Player.BLACK),
                            opponent_agent=RandomAgent(Player.WHITE),
                            qtable=SingleQTable(DEFAULT_Q_VALUE),
-                           reward_decay=0.2)
+                           reward_decay=0.8)
     qtable = training.train()
     training.print_stats()
+    with open('model.pkl', 'wb') as file:
+        pickle.dump(qtable, file)
+    print("Training completed!. Size of qtable: {}".format(qtable.qtable_size()))
 
     sys.exit()
 
