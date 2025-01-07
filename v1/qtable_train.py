@@ -19,7 +19,7 @@ LOSS_VALUE = -1.0
 
 DEFAULT_Q_VALUE = 0.0
 
-BOARD_SHAPE = 8
+BOARD_SHAPE = 4
 
 def game_state_encode(game_state, shape=BOARD_SHAPE):
     if not game_state:
@@ -71,7 +71,7 @@ class QTableTrain:
         self.total_reward = 0
         self.updated_qvalues_count = 0
         self.updated_qvalue_updates_total = 0
-
+        self.replay_buffer = None
 
     def train(self):
         self.qtable.start()
@@ -201,7 +201,7 @@ class QTableTrain:
                             game_state_hash(game_state) not in self.qtable.all_states()
                             # or move not in self.qtable.qtable[game_state_hash(game_state)]
                             ]
-        if random.random() < self.epsilon:
+        if self.is_exploration:
             # Exploration with preference to unexplored moves
             if unexplored_moves:
                 return random.choice(unexplored_moves)

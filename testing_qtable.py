@@ -15,7 +15,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-games = 10
+games = 100
 if __name__ == "__main__":
 
     with open('model.pkl', 'rb') as file:
@@ -23,13 +23,14 @@ if __name__ == "__main__":
 
     black = QTableAgent(Player.BLACK, restored_qtable)
     white = RandomAgent(Player.WHITE)
+    white = MinimaxAgent(Player.WHITE, 3)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
     for i in tqdm(range(games), desc="Playing games"):
         game_manager = GameManager(black, white)
         winner = game_manager.run()
         wins[winner] += 1
-    print(f"WHITE wins: ", wins[Player.WHITE])
     print(f"BLACK wins: ", wins[Player.BLACK])
+    print(f"WHITE wins: ", wins[Player.WHITE])
 
     sys.exit()
 
