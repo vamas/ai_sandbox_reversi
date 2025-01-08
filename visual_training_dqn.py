@@ -32,26 +32,26 @@ if __name__ == "__main__":
                                learning_rate=learning_rate,
                                discount_factor=discount_factor,
                                train_agent=RandomAgent(Player.BLACK),
-                               opponent_agent=DQNAgent(Player.WHITE, white_model),
+                               opponent_agent=RandomAgent(Player.WHITE),
                                reward_decay=reward_decay)
         model_black = training.train_dqn()
         training.print_stats()
         # Save the model
-        torch.save(model_black, "dqn_black_model_full_{}_plus.pth".format(total_games))
+        torch.save(model_black, "dqn_black_model_full_{}.pth".format(total_games))
 
-        # # Initialize the model for an 8x8 Othello board white
-        # print("Create baseline models. WHITE {}".format(total_games))
-        # training = DQNTrain(total_games=total_games,
-        #                     epsilon=epsilon,
-        #                     learning_rate=learning_rate,
-        #                     discount_factor=discount_factor,
-        #                     train_agent=RandomAgent(Player.WHITE),
-        #                     opponent_agent=RandomAgent(Player.BLACK),
-        #                     reward_decay=reward_decay)
-        # model_white = training.train_dqn()
-        # training.print_stats()
-        # # Save the model.
-        # torch.save(model_white, "dqn_white_model_full_{}_plus.pth".format(total_games))
+        # Initialize the model for an 8x8 Othello board white
+        print("Create baseline models. WHITE {}".format(total_games))
+        training = DQNTrain(total_games=total_games,
+                            epsilon=epsilon,
+                            learning_rate=learning_rate,
+                            discount_factor=discount_factor,
+                            train_agent=RandomAgent(Player.WHITE),
+                            opponent_agent=RandomAgent(Player.BLACK),
+                            reward_decay=reward_decay)
+        model_white = training.train_dqn()
+        training.print_stats()
+        # Save the model.
+        torch.save(model_white, "dqn_white_model_full_{}.pth".format(total_games))
 
 
 

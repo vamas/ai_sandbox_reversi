@@ -19,14 +19,14 @@ DEFAULT_Q_VALUE = 0.0
 games = 10
 if __name__ == "__main__":
 
-    training = QTableTrain(total_games=200000,
+    training = QTableTrain(total_games=1000000,
                            epsilon=0.9999,
                            learning_rate=0.01,
                            discount_factor=0.5,
                            train_agent=RandomAgent(Player.BLACK),
                            opponent_agent=RandomAgent(Player.WHITE),
                            qtable=SingleQTable(DEFAULT_Q_VALUE),
-                           reward_decay=0.9)
+                           reward_decay=0.5)
     qtable = training.train()
     training.print_stats()
     with open('model.pkl', 'wb') as file:

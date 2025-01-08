@@ -26,9 +26,9 @@ class GameManager:
 
     def run(self):
         move_info = None
+        self.print_board()
         while not self.game_state.game_over:
             # print(f"Player: {self.game_state.current_player}")
-            self.print_board()
             # print(self.game_state.board)
             if self.agents[self.game_state.current_player].agent_type == AgentType.PLAYER:
                 move = self.get_user_move()
@@ -36,8 +36,7 @@ class GameManager:
             else:
                 move = self.agents[self.game_state.current_player].get_best_move(self.game_state)
                 move_info = self.game_state.make_move(move)
-
-        self.print_board()
+            self.print_board()
         print("Winner is: ", self.game_state.winner)
         return self.game_state.winner
 
