@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     black = QTableAgent(Player.BLACK, restored_qtable)
     white = RandomAgent(Player.WHITE)
-    white = MinimaxAgent(Player.WHITE, 30)
+    # white = MinimaxAgent(Player.WHITE, 2)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
     for i in tqdm(range(games), desc="Playing games"):
         game_manager = GameManager(black, white)

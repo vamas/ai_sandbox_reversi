@@ -9,6 +9,7 @@ from v1.dqn_replaybuffer import ReplayBuffer
 from v1.gamestate import GameState, print_board
 from v1.player import Player, opponent
 from v1.position import Position, SkipPosition
+from v1.qtable_replaybuffer import QTableReplayBuffer
 from v1.qtable_single import SingleQTable
 from v1.qtable_double import DoubleQTable
 from v1.random_agent import RandomAgent
@@ -75,7 +76,7 @@ class QTableTrain:
 
     def train(self):
         self.qtable.start()
-        self.replay_buffer = ReplayBuffer(self.memory_size)
+        self.replay_buffer = QTableReplayBuffer(self.memory_size)
         epsilon = self.epsilon
         for epoch in range(1):
             self.epsilon = epsilon

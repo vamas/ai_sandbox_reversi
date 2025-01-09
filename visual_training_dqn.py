@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     white_model = torch.load("dqn_white_model_full_10000.pth")
 
-    total_games_ar = [10000]
+    total_games_ar = [10000, 20000, 30000, 40000, 50000]
     iterations = 1
     learning_rate_ratio = 20
     epsilon = 1.0

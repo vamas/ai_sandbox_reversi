@@ -70,8 +70,8 @@ class DQNTrain:
                  train_agent=RandomAgent(Player.BLACK),
                  opponent_agent=RandomAgent(Player.WHITE),
                  reward_decay=0.9,
-                 memory_size=10000,
-                 batch_size=512,
+                 memory_size=1000,
+                 batch_size=64,
                  model=None):
         """
         Initialize the Deep Q-Network.
@@ -163,7 +163,7 @@ class DQNTrain:
                     # if len(self.replay_buffer) > self.batch_size:
                     #     self.train_model(self.replay_buffer)
                     if self.replay_buffer.is_buffer_ready:
-                        print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.data_points))
+                        # print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.size()))
                         self.train_model(self.replay_buffer)
                     if game % self.target_update_freq == 0:
                         self.target_model.load_state_dict(self.model.state_dict())
@@ -308,7 +308,7 @@ class DQNTrain:
         Args:
             replay_buffer:
         """
-        print("Training model")
+        # print("Training model")
 
         # Sample minibatch
         states, actions, rewards, next_states, dones = replay_buffer.sample(self.batch_size)
