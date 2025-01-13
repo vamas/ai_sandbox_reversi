@@ -72,7 +72,8 @@ class DQNTrain:
                  reward_decay=0.9,
                  memory_size=1000,
                  batch_size=64,
-                 model=None):
+                 model=None,
+                 epochs=1000):
         """
         Initialize the Deep Q-Network.
 
@@ -103,11 +104,12 @@ class DQNTrain:
         self.optimizer =None
         self.loss_fn = None
         self.target_model = None
-        self.target_update_freq = 1000. # Update target q-network every other 1000 steps (played games)
+        self.target_update_freq = 1000. # Update target q-network every other 1000 epochs
         self.replay_buffer = None
         self.epoch_q_value_changes = []
         self.is_exploration = True
         self.model = model
+        self.epochs = epochs
 
     def initialize_model(self):
         """
@@ -150,28 +152,35 @@ class DQNTrain:
         self.epoch_q_value_changes = []
         epsilon = self.epsilon
         self.is_exploration = True
-        for epoch in range(1):
-            self.epsilon = epsilon
-            self.episode = 0
-            self.total_rewards = []
-            self.avg_q_values = []
+
+        self.epsilon = epsilon
+        self.episode = 0
+        self.total_rewards = []
+        self.avg_q_values = []
+
+        for epoch in range(self.epochs):
+            print("Epoch: {}/{}".format(epoch + 1, self.epochs))
             for game in range(self.total_games):
-                print("Game/Total games {}/{}".format(game + 1, self.total_games))
+                # print("Game/Total games {}/{}".format(game + 1, self.total_games))
                 self.play_single_game()
                 self.update_epsilon_boltzmann(game)
-                if not self.is_exploration:
-                    # if len(self.replay_buffer) > self.batch_size:
-                    #     self.train_model(self.replay_buffer)
-                    if self.replay_buffer.is_buffer_ready:
-                        # print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.size()))
-                        self.train_model(self.replay_buffer)
-                    if game % self.target_update_freq == 0:
-                        self.target_model.load_state_dict(self.model.state_dict())
-                if random.random() < self.epsilon:
-                    self.is_exploration = True
-                else:
-                    self.is_exploration = False
-                game += 1
+                # if not self.is_exploration:
+                #     # if len(self.replay_buffer) > self.batch_size:
+                #     #     self.train_model(self.replay_buffer)
+                #     if self.replay_buffer.is_buffer_ready:
+                #         # print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.size()))
+                #         self.train_model(self.replay_buffer)
+                #     if game % self.target_update_freq == 0:
+                #         self.target_model.load_state_dict(self.model.state_dict())
+                # if random.random() < self.epsilon:
+                #     self.is_exploration = True
+                # else:
+                #     self.is_exploration = False
+                # game += 1
+
+            self.train_model(self.replay_buffer)
+            if epoch % self.target_update_freq == 0:
+                self.target_model.load_state_dict(self.model.state_dict())
         return self.model
 
     def play_game(self):

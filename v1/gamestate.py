@@ -8,17 +8,17 @@ from v1.player import opponent
 from v1.position import Position, SkipPosition
 from v1.moveinfo import MoveInfo
 
-BOARD_SHAPE = 8
+BOARD_SHAPE = 4
 
-Mid1 = (3, 3)
-Mid2 = (4, 4)
-Mid3 = (3, 4)
-Mid4 = (4, 3)
+# Mid1 = (3, 3)
+# Mid2 = (4, 4)
+# Mid3 = (3, 4)
+# Mid4 = (4, 3)
 
-# Mid1 = (2, 1)
-# Mid2 = (1, 2)
-# Mid3 = (2, 2)
-# Mid4 = (1, 1)
+Mid1 = (2, 1)
+Mid2 = (1, 2)
+Mid3 = (2, 2)
+Mid4 = (1, 1)
 
 
 def print_board(game_state):

@@ -23,13 +23,13 @@ if __name__ == "__main__":
                            epsilon=0.9999,
                            learning_rate=0.1,
                            discount_factor=0.5,
-                           train_agent=RandomAgent(Player.BLACK),
-                           opponent_agent=RandomAgent(Player.WHITE),
+                           train_agent=RandomAgent(Player.WHITE),
+                           opponent_agent=RandomAgent(Player.BLACK),
                            qtable=SingleQTable(DEFAULT_Q_VALUE),
                            reward_decay=0.5)
     qtable = training.train()
     training.print_stats()
-    with open('model.pkl', 'wb') as file:
+    with open('qtable_white_10000.pkl', 'wb') as file:
         pickle.dump(qtable, file)
     print("Training completed!. Size of qtable: {}".format(qtable.qtable_size()))
 
