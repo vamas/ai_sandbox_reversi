@@ -15,11 +15,17 @@ DEFAULT_Q_VALUE = 0.0
 games = 1
 if __name__ == "__main__":
 
+    # Best config so far - 92%
+    # epsilon = 1.0
+    # discount_factor = 0.1
+    # reward_decay = 0.9
+    # learning_rate = 0.001
+
     total_games_ar = [100000]
     epsilon = 1.0
-    discount_factor = 0.05
-    reward_decay = 0.99
-    learning_rate = 0.0001
+    discount_factor = 0.1
+    reward_decay = 0.9
+    learning_rate = 0.001
     for total_games in total_games_ar:
         print("Create baseline models. BLACK {}".format(total_games))
         # Initialize the model for an 8x8 Othello board black
@@ -30,6 +36,9 @@ if __name__ == "__main__":
                                train_agent=RandomAgent(Player.BLACK),
                                opponent_agent=RandomAgent(Player.WHITE),
                                reward_decay=reward_decay,
+                               memory_size=1000,
+                               batch_size=64,
+                               model=None,
                                epochs=1)
         model_black = training.train_dqn()
         training.print_stats()
