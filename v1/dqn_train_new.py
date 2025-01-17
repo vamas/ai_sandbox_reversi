@@ -7,6 +7,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import lr_scheduler
+from tqdm import tqdm
 
 from v1.dqn import DQN
 from v1.dqn_replaybuffer import ReplayBuffer
@@ -23,33 +25,79 @@ DEFAULT_Q_VALUE = 1.0
 
 BOARD_SHAPE = 4
 
-def game_state_encode(game_state, shape=BOARD_SHAPE):
+def game_state_one_hot_encode(game_state, shape=BOARD_SHAPE):
     if game_state is None:
-        return np.zeros(shape * shape, dtype=float)
-    state = np.zeros(game_state.Rows * game_state.Cols, dtype=float)
+        return np.zeros(shape * shape + shape * shape, dtype=float)
+    state = np.zeros(game_state.Rows * game_state.Cols + game_state.Rows * game_state.Cols, dtype=float)
     for row in range(game_state.Rows):
         for col in range(game_state.Cols):
-            idx = row * game_state.Cols + col
-            if game_state.board[row][col] == Player.BLACK:
-                state[idx] = 1
-            elif game_state.board[row][col] == Player.WHITE:
-                state[idx] = -1
+            if game_state.board[row][col] != Player.NONE:
+                idx = row * game_state.Cols + col
+                if game_state.board[row][col] == Player.BLACK:
+                    state[idx] = 1
+                elif game_state.board[row][col] == Player.WHITE:
+                    state[idx + shape * shape] = 1
     return state.flatten()
 
-def action_encode(move_info, shape=BOARD_SHAPE):
-    if move_info.position.row == -1 and move_info.position.col == -1:
-        return shape*shape
-    return shape * move_info.position.row + move_info.position.col
+def game_state_one_hot_decode(encoded_state, shape=BOARD_SHAPE):
+    """
+    Decode a one-hot encoded game state back to a GameState object.
 
-def position_encode(position, shape=BOARD_SHAPE):
+    Args:
+        encoded_state (np.array): One-hot encoded game state.
+        shape (int): The shape of the board (default is BOARD_SHAPE).
+
+    Returns:
+        GameState: The decoded GameState object.
+    """
+    board = np.zeros((shape, shape), dtype=int)
+    half = shape * shape
+    for idx in range(half):
+        row = idx // shape
+        col = idx % shape
+        if encoded_state[idx] == 1:
+            board[row][col] = Player.BLACK
+        elif encoded_state[idx + half] == 1:
+            board[row][col] = Player.WHITE
+    return GameState(board=board)
+
+def position_one_hot_encode(move_info, shape=BOARD_SHAPE):
+    if move_info.position.row == -1 and move_info.position.col == -1:
+        return 0
+    return 1 << (move_info.position.row * shape + move_info.position.col)
+
+def position_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
+    if action_encoded == 0:
+        return SkipPosition()
+    index = int(math.log2(action_encoded))
+    x = index // shape
+    y = index % shape
+    return Position(x, y)
+
+# def action_encode(move_info, shape=BOARD_SHAPE):
+#     if move_info.position.row == -1 and move_info.position.col == -1:
+#         return 0
+#     return (move_info.position.row << 2) | move_info.position.col
+#
+# def action_decode(action_encoded, shape=BOARD_SHAPE):
+#     x = (action_encoded >> 2) & 0b11
+#     y = action_encoded & 0b11
+#     return Position(x, y)
+
+# def action_encode(move_info, shape=BOARD_SHAPE):
+#     if move_info.position.row == -1 and move_info.position.col == -1:
+#         return shape*shape
+#     return shape * move_info.position.row + move_info.position.col
+
+def action_encode(position, shape=BOARD_SHAPE):
     if position.row == -1 and position.col == -1:
         return shape*shape
     return shape * position.row + position.col
 
-def action_decode(action, shape=BOARD_SHAPE):
-    if action == shape*shape:
+def action_decode(action_encoded, shape=BOARD_SHAPE):
+    if action_encoded == shape*shape:
         return SkipPosition()
-    return Position(action // shape, action % shape)
+    return Position(action_encoded // shape, action_encoded % shape)
 
 # - Play game
 # - Make first training move
@@ -62,7 +110,7 @@ def action_decode(action, shape=BOARD_SHAPE):
 class DQNTrain:
 
     def __init__(self,
-                 hidden_dim=16,
+                 hidden_dim=128,
                  total_games=100,
                  learning_rate=0.4,
                  discount_factor=1.0,
@@ -73,7 +121,7 @@ class DQNTrain:
                  memory_size=1000,
                  batch_size=64,
                  model=None,
-                 epochs=1000):
+                 epochs=1):
         """
         Initialize the Deep Q-Network.
 
@@ -95,7 +143,7 @@ class DQNTrain:
         self.total_rewards = []
         self.avg_q_values = []
         self.reward_decay = reward_decay
-        self.input_dim = BOARD_SHAPE * BOARD_SHAPE
+        self.input_dim = BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE
         self.output_dim = BOARD_SHAPE * BOARD_SHAPE + 1
         self.hidden_dim = hidden_dim
         self.memory_size = memory_size
@@ -104,12 +152,14 @@ class DQNTrain:
         self.optimizer =None
         self.loss_fn = None
         self.target_model = None
-        self.target_update_freq = 1000. # Update target q-network every other 1000 epochs
+        self.target_update_freq = 1000. # Update target q-network every other 1000 steps (played games)
         self.replay_buffer = None
         self.epoch_q_value_changes = []
         self.is_exploration = True
         self.model = model
         self.epochs = epochs
+        self.illegal_moves = []
+        self.epoch_illegal_moves = 0
 
     def initialize_model(self):
         """
@@ -131,9 +181,19 @@ class DQNTrain:
 
         model = DQN(input_dim, output_dim, self.hidden_dim)
         optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
-        loss_fn = nn.MSELoss()
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=self.total_games/100, gamma=0.85)
 
-        return model, optimizer, loss_fn
+        for layer in model.children():
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+                nn.init.zeros_(layer.bias)
+
+        # for name, param in model.named_parameters():
+        #     print(f"Layer: {name}, Weights Mean: {param.mean().item()}, Std: {param.std().item()}")
+
+        loss_fn = nn.SmoothL1Loss()
+
+        return model, optimizer, loss_fn, scheduler
 
     def train_dqn(self):
         """
@@ -143,44 +203,34 @@ class DQNTrain:
             model (DQN): The trained DQN model.
         """
         if self.model is None:
-            self.model, self.optimizer, self.loss_fn = self.initialize_model()
+            self.model, self.optimizer, self.loss_fn, self.scheduler = self.initialize_model()
         else:
-            _, self.optimizer, self.loss_fn = self.initialize_model()
-        self.target_model, _, _ = self.initialize_model()
+            _, self.optimizer, self.loss_fn, self.scheduler = self.initialize_model()
+        self.target_model, _, _, _ = self.initialize_model()
         self.target_model.load_state_dict(self.model.state_dict())  # Initialize with same weights
         self.replay_buffer = ReplayBuffer(self.memory_size)
         self.epoch_q_value_changes = []
-        epsilon = self.epsilon
-        self.is_exploration = True
-
-        self.epsilon = epsilon
-        self.episode = 0
         self.total_rewards = []
         self.avg_q_values = []
+        self.is_exploration = True
+        for game in tqdm(range(self.total_games), desc="Training DQN"):
+            # print("Game/Total games {}/{}".format(game + 1, self.total_games))
+            self.play_game()
+            self.update_epsilon_boltzmann(game)
 
-        for epoch in range(self.epochs):
-            print("Epoch: {}/{}".format(epoch + 1, self.epochs))
-            for game in range(self.total_games):
-                # print("Game/Total games {}/{}".format(game + 1, self.total_games))
-                self.play_single_game()
-                self.update_epsilon_boltzmann(game)
-                # if not self.is_exploration:
-                #     # if len(self.replay_buffer) > self.batch_size:
-                #     #     self.train_model(self.replay_buffer)
-                #     if self.replay_buffer.is_buffer_ready:
-                #         # print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.size()))
-                #         self.train_model(self.replay_buffer)
-                #     if game % self.target_update_freq == 0:
-                #         self.target_model.load_state_dict(self.model.state_dict())
-                # if random.random() < self.epsilon:
-                #     self.is_exploration = True
-                # else:
-                #     self.is_exploration = False
-                # game += 1
+            if random.random() < self.epsilon:
+                self.is_exploration = True
+            else:
+                self.is_exploration = False
+            game += 1
 
-            self.train_model(self.replay_buffer)
-            if epoch % self.target_update_freq == 0:
+            if self.replay_buffer.is_buffer_ready:
+                self.train_model(self.replay_buffer)
+                self.illegal_moves.append(self.epoch_illegal_moves)
+                self.epoch_illegal_moves = 0
+            if game % self.target_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
+
         return self.model
 
     def play_game(self):
@@ -250,10 +300,10 @@ class DQNTrain:
         done = 1
         next_state = None
         for move, game_state in reversed(game_history):
-            self.replay_buffer.push(game_state_encode(game_state),
-                                    action_encode(move),
+            self.replay_buffer.push(game_state_one_hot_encode(game_state),
+                                    action_encode(move.position),
                                     reward,
-                                    game_state_encode(next_state),
+                                    game_state_one_hot_encode(next_state),
                                     done)
             reward = reward * self.reward_decay
             done = 0
@@ -305,10 +355,14 @@ class DQNTrain:
                     return SkipPosition()
                 if isinstance(legal_moves[0], SkipPosition):
                     return SkipPosition()
-                legal_moves_idx = [position_encode(move) for move in legal_moves]
-                q_values = self.model(torch.tensor(game_state_encode(game_state), dtype=torch.float32).unsqueeze(0))
-                pos = q_values[0][:(game_state.Cols*game_state.Rows)][legal_moves_idx].argmax(axis=0).item()
-                return legal_moves[pos]
+                q_values = self.model(torch.tensor(game_state_one_hot_encode(game_state), dtype=torch.float32).unsqueeze(0))
+                best_move = action_decode(q_values[0].argmax(axis=0).item())
+                if best_move not in legal_moves:
+                    self.epoch_illegal_moves += 1
+                # Select best move based on highest q-value taking into consideration only legal moves
+                legal_q_values = {move: q_values[0][action_encode(move)].item() for move in legal_moves}
+                best_move = max(legal_q_values, key=legal_q_values.get)
+                return best_move
 
     def train_model(self, replay_buffer):
         """
@@ -317,40 +371,52 @@ class DQNTrain:
         Args:
             replay_buffer:
         """
-        # print("Training model")
+        for epoch in range(self.epochs):
+            # Sample minibatch
+            states, actions, rewards, next_states, dones = replay_buffer.sample(self.batch_size)
 
-        # Sample minibatch
-        states, actions, rewards, next_states, dones = replay_buffer.sample(self.batch_size)
+            # Convert to tensors
+            states = torch.tensor(states, dtype=torch.float32)
+            actions = torch.tensor(actions, dtype=torch.long)
+            rewards = torch.tensor(rewards, dtype=torch.float32)
+            next_states = torch.tensor(next_states, dtype=torch.float32)
+            dones = torch.tensor(dones, dtype=torch.float32)
 
-        # Convert to tensors
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.long)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+            # Compute Q-values and targets
+            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+            next_q_values = self.target_model(next_states).max(1)[0]
+            # Compute targets using Bellmans equation
+            # For the end states we don't add the discounted future rewards
+            targets = rewards + (1 - dones) * self.discount_factor * next_q_values
 
-        # Compute Q-values and targets
-        q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-        next_q_values = self.target_model(next_states).max(1)[0]
-        targets = rewards + (1 - dones) * self.discount_factor * next_q_values
+            # During training, after computing Q-values
+            with torch.no_grad():
+                old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
+            # Calculate Q-value changes
+            q_value_changes = torch.abs(old_q_values - targets)
+            # Average Q-value change
+            avg_q_value_change = q_value_changes.mean().item()
+            # Log this for analysis
+            self.epoch_q_value_changes.append(avg_q_value_change)
 
-        # During training, after computing Q-values
-        with torch.no_grad():
-            old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
-        # Calculate Q-value changes
-        q_value_changes = torch.abs(old_q_values - targets)
-        # Average Q-value change
-        avg_q_value_change = q_value_changes.mean().item()
-        # Log this for analysis
-        self.epoch_q_value_changes.append(avg_q_value_change)
+            # Compute loss
+            loss = self.loss_fn(q_values, targets)
 
-        # Compute loss
-        loss = self.loss_fn(q_values, targets)
+            # print("Q-values:", q_values)
+            # print("Targets:", targets)
+            # print("Loss:", loss.item())
 
-        # Backpropagation
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+            # Backpropagation
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            # Update learning rate
+            self.scheduler.step()
+            # current_lr = self.optimizer.param_groups[0]['lr']
+            # print(f"Current Learning Rate: {current_lr}")
+
+        self.replay_buffer.purge()
 
     def game_result_reward(self, winner):
         if winner == Player.NONE:
@@ -370,6 +436,11 @@ class DQNTrain:
         plt.title("Average Q-value Change Per Epoch")
         plt.xlabel("Epoch")
         plt.ylabel("Average Q-value Change")
+        plt.show()
+        plt.plot(self.illegal_moves)
+        plt.title("Illegal moves")
+        plt.xlabel("Epoch")
+        plt.ylabel("Volume of illegal moves")
         plt.show()
 
     def update_epsilon(self, current_step):

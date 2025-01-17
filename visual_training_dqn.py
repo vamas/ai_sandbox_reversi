@@ -16,23 +16,21 @@ games = 1
 if __name__ == "__main__":
 
     total_games_ar = [100000]
-    iterations = 1
-    learning_rate_ratio = 20
     epsilon = 1.0
-    discount_factor = 0.1
-    reward_decay = 0.5
+    discount_factor = 0.05
+    reward_decay = 0.99
+    learning_rate = 0.0001
     for total_games in total_games_ar:
-        learning_rate = total_games / 1000000 / learning_rate_ratio
         print("Create baseline models. BLACK {}".format(total_games))
         # Initialize the model for an 8x8 Othello board black
-        training = DQNTrain(total_games=100,
+        training = DQNTrain(total_games=total_games,
                                epsilon=epsilon,
                                learning_rate=learning_rate,
                                discount_factor=discount_factor,
                                train_agent=RandomAgent(Player.BLACK),
                                opponent_agent=RandomAgent(Player.WHITE),
                                reward_decay=reward_decay,
-                               epochs=total_games)
+                               epochs=1)
         model_black = training.train_dqn()
         training.print_stats()
         # Save the model

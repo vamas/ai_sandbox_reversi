@@ -9,22 +9,46 @@ from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
 from v1.gamemanager_console import GameManager
 from v1.qtable_agent import QTableAgent
+from v1.random_agent import RandomAgent
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-games = 100
+# 100000
+# 49.5% win rate against random agent
+# 0% win rate against qtable_white_10000
+# 0% win rate against qtable_white_20000
+# 0% win rate against qtable_white_30000
+# 0% win rate against qtable_white_40000
+
+# 500000
+# 17.3% win rate against random agent
+# 100% win rate against qtable_white_10000
+# 0% win rate against qtable_white_20000
+# 0% win rate against qtable_white_30000
+# 0% win rate against qtable_white_40000
+
+# 1000000
+# 48.9% win rate against random agent
+# 100% win rate against qtable_white_10000
+# 0% win rate against qtable_white_20000
+# 0% win rate against qtable_white_30000
+# 0% win rate against qtable_white_40000
+
+games = 1000
 if __name__ == "__main__":
 
     b_performance = []
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
 
-    black_model = torch.load("dqn_black_model_full_10000.pth")
-    with open('qtable_white_10000.pkl', 'rb') as file:
+    black_model = torch.load("dqn_black_model_full_100000.pth")
+    with open('qtable_white_20000.pkl', 'rb') as file:
         restored_qtable = pickle.load(file)
     black = DQNAgent(Player.BLACK, black_model)
     white = QTableAgent(Player.WHITE, restored_qtable)
+
+    white = RandomAgent(Player.WHITE)
 
     for i in tqdm(range(games), desc="Playing games"):
         game_manager = GameManager(black, white)

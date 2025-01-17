@@ -23,3 +23,7 @@ class ReplayBuffer:
 
     def size(self):
         return len(self.buffer)
+
+    def purge(self):
+        self.buffer.clear()
+        self._is_buffer_ready = False

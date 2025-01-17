@@ -7,21 +7,22 @@ from v1.dqn_agent import DQNAgent
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
 from v1.gamemanager_console import GameManager
+from v1.random_agent import RandomAgent
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-games = 1
+games = 1000
 if __name__ == "__main__":
 
     b_performance = []
-    black_model = torch.load("dqn_black_model_full_40000.pth")
-    white_model = torch.load("dqn_white_model_full_100000_plus.pth")
+    black_model = torch.load("dqn_black_model_full_100000.pth")
+    # white_model = torch.load("dqn_white_model_full_100000_plus.pth")
     black = DQNAgent(Player.BLACK, black_model)
-    white = DQNAgent(Player.WHITE, white_model)
+    # white = DQNAgent(Player.WHITE, white_model)
     # black = MinimaxAgent(Player.BLACK, 3)
-    # white = RandomAgent(Player.WHITE)
+    white = RandomAgent(Player.WHITE)
     # white = MinimaxAgent(Player.WHITE, 3)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
     for i in tqdm(range(games), desc="Playing games"):

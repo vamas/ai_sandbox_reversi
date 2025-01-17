@@ -70,7 +70,7 @@ class DQNTrain:
                  train_agent=RandomAgent(Player.BLACK),
                  opponent_agent=RandomAgent(Player.WHITE),
                  reward_decay=0.9,
-                 memory_size=1000,
+                 memory_size=128,
                  batch_size=64,
                  model=None):
         """
