@@ -61,28 +61,28 @@ def game_state_one_hot_decode(encoded_state, shape=BOARD_SHAPE):
             board[row][col] = Player.WHITE
     return GameState(board=board)
 
-def position_one_hot_encode(move_info, shape=BOARD_SHAPE):
-    if move_info.position.row == -1 and move_info.position.col == -1:
-        return 0
-    return 1 << (move_info.position.row * shape + move_info.position.col)
+def position_one_hot_encode(position, shape=BOARD_SHAPE):
+    if position.row == -1 and position.col == -1:
+        return 1 << 16
+    return 1 << (position.row * shape + position.col)
 
 def position_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
-    if action_encoded == 0:
+    if action_encoded == (1 << 16):
         return SkipPosition()
     index = int(math.log2(action_encoded))
     x = index // shape
     y = index % shape
     return Position(x, y)
 
-# def action_encode(move_info, shape=BOARD_SHAPE):
-#     if move_info.position.row == -1 and move_info.position.col == -1:
-#         return 0
-#     return (move_info.position.row << 2) | move_info.position.col
-#
-# def action_decode(action_encoded, shape=BOARD_SHAPE):
-#     x = (action_encoded >> 2) & 0b11
-#     y = action_encoded & 0b11
-#     return Position(x, y)
+def action_one_hot_encode(position, shape=BOARD_SHAPE):
+    if position.row == -1 and position.col == -1:
+        return
+    return (position.row << 2) | position.col
+
+def action_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
+    x = (action_encoded >> 2) & 0b11
+    y = action_encoded & 0b11
+    return Position(x, y)
 
 # def action_encode(move_info, shape=BOARD_SHAPE):
 #     if move_info.position.row == -1 and move_info.position.col == -1:
