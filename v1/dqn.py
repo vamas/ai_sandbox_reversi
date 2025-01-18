@@ -17,6 +17,15 @@ class DQN(nn.Module):
             hidden_dim (int): Number of units in the hidden layers.
         """
         super(DQN, self).__init__()
+        # self.network = nn.Sequential(
+        #     nn.Linear(input_dim, hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, (hidden_dim >> 2)),
+        #     nn.ReLU(),
+        #     nn.Linear((hidden_dim >> 2), output_dim)
+        # )
         self.network = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),

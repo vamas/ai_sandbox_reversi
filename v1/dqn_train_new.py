@@ -116,7 +116,7 @@ def action_decode(action_encoded, shape=BOARD_SHAPE):
 class DQNTrain:
 
     def __init__(self,
-                 hidden_dim=128,
+                 hidden_dim=256,
                  total_games=100,
                  learning_rate=0.4,
                  discount_factor=1.0,
@@ -168,6 +168,9 @@ class DQNTrain:
         self.illegal_moves = []
         self.epoch_illegal_moves = 0
         self.epsilon_min = epsilon_min
+        self.epsilon_decay = np.exp(np.log(epsilon_min / epsilon) / total_games)
+        self.recent_avg_reward = 0
+        self.epsilon_hostory = []
 
     def initialize_model(self):
         """
@@ -224,7 +227,7 @@ class DQNTrain:
         for game in tqdm(range(self.total_games), desc="Training DQN"):
             # print("Game/Total games {}/{}".format(game + 1, self.total_games))
             self.play_game()
-            self.update_epsilon(game)
+            self.update_epsilon_boltzmann(game)
 
             if random.random() < self.epsilon:
                 self.is_exploration = True
@@ -232,12 +235,14 @@ class DQNTrain:
                 self.is_exploration = False
 
             if self.replay_buffer.is_buffer_ready:
+                # print("Train")
                 self.train_model(self.replay_buffer)
                 self.illegal_moves.append(self.epoch_illegal_moves)
                 self.epoch_illegal_moves = 0
             if game % self.target_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
 
+            # print("Epsilon: {}", self.epsilon)
         return self.model
 
     def play_game(self):
@@ -406,6 +411,7 @@ class DQNTrain:
             q_value_changes = torch.abs(old_q_values - targets)
             # Average Q-value change
             avg_q_value_change = q_value_changes.mean().item()
+            self.recent_avg_reward = avg_q_value_change
             # Log this for analysis
             self.epoch_q_value_changes.append(avg_q_value_change)
 
@@ -426,7 +432,7 @@ class DQNTrain:
             # current_lr = self.optimizer.param_groups[0]['lr']
             # print(f"Current Learning Rate: {current_lr}")
 
-        self.replay_buffer.purge()
+        # self.replay_buffer.purge()
 
     def game_result_reward(self, winner):
         if winner == Player.NONE:
@@ -452,6 +458,12 @@ class DQNTrain:
         plt.xlabel("Epoch")
         plt.ylabel("Volume of illegal moves")
         plt.show()
+        plt.plot(self.epsilon_hostory)
+        plt.title("Epsilon history")
+        plt.xlabel("Epoch")
+        plt.ylabel("Epsilon history")
+        plt.show()
+
 
     def update_epsilon(self, current_step):
         """
@@ -465,9 +477,10 @@ class DQNTrain:
         """
         if (current_step + 1) % (self.total_games / 10) == 0:
             self.epsilon = max(self.epsilon_min, max(0, self.epsilon - 0.1))
+        self.epsilon_hostory.append(self.epsilon)
         return self.epsilon
 
-    def update_epsilon_boltzmann(self, current_step, decay_rate=0.001):
+    def update_epsilon_boltzmann(self, current_step, decay_rate=0.0000000001):
         """
         Update epsilon using Boltzmann exploration policy.
 
@@ -481,4 +494,12 @@ class DQNTrain:
         """
         temperature = self.epsilon * math.exp(-decay_rate * current_step)
         self.epsilon = max(self.epsilon_min, temperature)
+        self.epsilon_hostory.append(self.epsilon)
         return self.epsilon
+
+    def update_epsilon_adaptive(self, threshold=0.2):
+        if self.recent_avg_reward < threshold:
+            self.epsilon = min(1.0, self.epsilon * 1.001)  # Slightly increase exploration
+        else:
+            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+        self.epsilon_hostory.append(self.epsilon)
