@@ -71,7 +71,7 @@ class DQNTrain:
                  opponent_agent=RandomAgent(Player.WHITE),
                  reward_decay=0.9,
                  memory_size=128,
-                 batch_size=64,
+                 batch_size=128,
                  model=None):
         """
         Initialize the Deep Q-Network.
@@ -157,9 +157,10 @@ class DQNTrain:
             self.avg_q_values = []
             for game in range(self.total_games):
                 print("Game/Total games {}/{}".format(game + 1, self.total_games))
-                self.play_single_game()
+                self.play_game()
                 self.update_epsilon_boltzmann(game)
-                if not self.is_exploration:
+                # if not self.is_exploration:
+                if True:
                     # if len(self.replay_buffer) > self.batch_size:
                     #     self.train_model(self.replay_buffer)
                     if self.replay_buffer.is_buffer_ready:

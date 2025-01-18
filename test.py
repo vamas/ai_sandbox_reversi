@@ -1,6 +1,7 @@
 import unittest
 
-from v1.dqn_train_new import position_one_hot_encode, position_one_hot_decode, action_encode, action_one_hot_encode
+from v1.dqn_train_new import position_one_hot_encode, position_one_hot_decode, action_encode, action_one_hot_encode, \
+    one_hot_encoding_to_idx
 from v1.moveinfo import MoveInfo
 from v1.player import Player
 from v1.position import Position, SkipPosition
@@ -78,3 +79,21 @@ class TestOthello(unittest.TestCase):
     #     self.assertEqual(action_one_hot_encode(Position(1, 2)), 4)
     #     self.assertEqual(action_one_hot_encode(Position(1, 3)), 8)
 
+    def test_position_one_hot_to_idx(self):
+        self.assertEqual(one_hot_encoding_to_idx(65536), 16)
+        self.assertEqual(one_hot_encoding_to_idx(1), 0)
+        self.assertEqual(one_hot_encoding_to_idx(2), 1)
+        self.assertEqual(one_hot_encoding_to_idx(4), 2)
+        self.assertEqual(one_hot_encoding_to_idx(8), 3)
+        self.assertEqual(one_hot_encoding_to_idx(16), 4)
+        self.assertEqual(one_hot_encoding_to_idx(32), 5)
+        self.assertEqual(one_hot_encoding_to_idx(64), 6)
+        self.assertEqual(one_hot_encoding_to_idx(128), 7)
+        self.assertEqual(one_hot_encoding_to_idx(264), 8)
+        self.assertEqual(one_hot_encoding_to_idx(512), 9)
+        self.assertEqual(one_hot_encoding_to_idx(1024), 10)
+        self.assertEqual(one_hot_encoding_to_idx(2048), 11)
+        self.assertEqual(one_hot_encoding_to_idx(4096), 12)
+        self.assertEqual(one_hot_encoding_to_idx(8192), 13)
+        self.assertEqual(one_hot_encoding_to_idx(16384), 14)
+        self.assertEqual(one_hot_encoding_to_idx(32768), 15)

@@ -4,7 +4,7 @@ import torch
 
 from v1.agent import Agent, AgentType
 from v1.dqn_train_new import position_one_hot_decode, game_state_one_hot_encode, game_state_one_hot_decode, \
-    action_encode, action_decode
+    action_encode, action_decode, one_hot_encoding_to_idx, position_one_hot_encode
 from v1.position import SkipPosition
 from v1.qtable_train import game_state_hash
 
@@ -32,7 +32,7 @@ class DQNAgent(Agent):
         # best_move = action_decode(q_values[0].argmax(axis=0).item())
 
         # Select best move based on highest q-value taking into consideration only legal moves
-        legal_q_values = {move: q_values[0][action_encode(move)].item() for move in legal_moves}
+        legal_q_values = {move: q_values[0][one_hot_encoding_to_idx(position_one_hot_encode(move))].item() for move in legal_moves}
         best_move = max(legal_q_values, key=legal_q_values.get)
         return best_move
 

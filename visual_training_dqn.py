@@ -20,12 +20,20 @@ if __name__ == "__main__":
     # discount_factor = 0.1
     # reward_decay = 0.9
     # learning_rate = 0.001
+    # epsilon_min = 0.01
+    # memory_size = 1000
+    # epochs = 1
+    # batch_size = 64
 
     total_games_ar = [100000]
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.9
     learning_rate = 0.001
+    epsilon_min = 0.1
+    memory_size = 256
+    epochs = 1
+    batch_size = 64
     for total_games in total_games_ar:
         print("Create baseline models. BLACK {}".format(total_games))
         # Initialize the model for an 8x8 Othello board black
@@ -36,10 +44,11 @@ if __name__ == "__main__":
                                train_agent=RandomAgent(Player.BLACK),
                                opponent_agent=RandomAgent(Player.WHITE),
                                reward_decay=reward_decay,
-                               memory_size=1000,
-                               batch_size=64,
+                               memory_size=memory_size,
+                               batch_size=batch_size,
                                model=None,
-                               epochs=1)
+                               epochs=epochs,
+                               epsilon_min=epsilon_min)
         model_black = training.train_dqn()
         training.print_stats()
         # Save the model

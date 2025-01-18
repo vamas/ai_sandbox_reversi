@@ -74,15 +74,21 @@ def position_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
     y = index % shape
     return Position(x, y)
 
-def action_one_hot_encode(position, shape=BOARD_SHAPE):
-    if position.row == -1 and position.col == -1:
-        return
-    return (position.row << 2) | position.col
+# def action_one_hot_encode(position, shape=BOARD_SHAPE):
+#     if position.row == -1 and position.col == -1:
+#         return
+#     return (position.row << 2) | position.col
+#
+# def action_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
+#     x = (action_encoded >> 2) & 0b11
+#     y = action_encoded & 0b11
+#     return Position(x, y)
 
-def action_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
-    x = (action_encoded >> 2) & 0b11
-    y = action_encoded & 0b11
-    return Position(x, y)
+def one_hot_encoding_to_idx(encoded):
+    if encoded == (1 << 16):
+        return 16
+    return int(math.log2(encoded))
+
 
 # def action_encode(move_info, shape=BOARD_SHAPE):
 #     if move_info.position.row == -1 and move_info.position.col == -1:
@@ -121,7 +127,8 @@ class DQNTrain:
                  memory_size=1000,
                  batch_size=64,
                  model=None,
-                 epochs=1):
+                 epochs=1,
+                 epsilon_min=0.1):
         """
         Initialize the Deep Q-Network.
 
@@ -160,6 +167,7 @@ class DQNTrain:
         self.epochs = epochs
         self.illegal_moves = []
         self.epoch_illegal_moves = 0
+        self.epsilon_min = epsilon_min
 
     def initialize_model(self):
         """
@@ -216,13 +224,12 @@ class DQNTrain:
         for game in tqdm(range(self.total_games), desc="Training DQN"):
             # print("Game/Total games {}/{}".format(game + 1, self.total_games))
             self.play_game()
-            self.update_epsilon_boltzmann(game)
+            self.update_epsilon(game)
 
             if random.random() < self.epsilon:
                 self.is_exploration = True
             else:
                 self.is_exploration = False
-            game += 1
 
             if self.replay_buffer.is_buffer_ready:
                 self.train_model(self.replay_buffer)
@@ -301,7 +308,7 @@ class DQNTrain:
         next_state = None
         for move, game_state in reversed(game_history):
             self.replay_buffer.push(game_state_one_hot_encode(game_state),
-                                    action_encode(move.position),
+                                    position_one_hot_encode(move.position),
                                     reward,
                                     game_state_one_hot_encode(next_state),
                                     done)
@@ -360,7 +367,7 @@ class DQNTrain:
                 if best_move not in legal_moves:
                     self.epoch_illegal_moves += 1
                 # Select best move based on highest q-value taking into consideration only legal moves
-                legal_q_values = {move: q_values[0][action_encode(move)].item() for move in legal_moves}
+                legal_q_values = {move: q_values[0][one_hot_encoding_to_idx(position_one_hot_encode(move))].item() for move in legal_moves}
                 best_move = max(legal_q_values, key=legal_q_values.get)
                 return best_move
 
@@ -383,7 +390,10 @@ class DQNTrain:
             dones = torch.tensor(dones, dtype=torch.float32)
 
             # Compute Q-values and targets
-            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+            f = lambda x: one_hot_encoding_to_idx(x)
+            actions_unsqueeze = torch.tensor(actions.unsqueeze(1), dtype=torch.long).apply_(f)
+
+            q_values = self.model(states).gather(1, actions_unsqueeze).squeeze(1)
             next_q_values = self.target_model(next_states).max(1)[0]
             # Compute targets using Bellmans equation
             # For the end states we don't add the discounted future rewards
@@ -391,7 +401,7 @@ class DQNTrain:
 
             # During training, after computing Q-values
             with torch.no_grad():
-                old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
+                old_q_values = self.model(states).gather(1, actions_unsqueeze).squeeze(1)  # Shape: [B]
             # Calculate Q-value changes
             q_value_changes = torch.abs(old_q_values - targets)
             # Average Q-value change
@@ -454,10 +464,10 @@ class DQNTrain:
             float: Updated epsilon value.
         """
         if (current_step + 1) % (self.total_games / 10) == 0:
-            self.epsilon = max(0, self.epsilon - 0.1)
+            self.epsilon = max(self.epsilon_min, max(0, self.epsilon - 0.1))
         return self.epsilon
 
-    def update_epsilon_boltzmann(self, current_step, decay_rate=0.001, min_epsilon=0.00001):
+    def update_epsilon_boltzmann(self, current_step, decay_rate=0.001):
         """
         Update epsilon using Boltzmann exploration policy.
 
@@ -470,5 +480,5 @@ class DQNTrain:
             float: Updated epsilon value.
         """
         temperature = self.epsilon * math.exp(-decay_rate * current_step)
-        self.epsilon = max(min_epsilon, temperature)
+        self.epsilon = max(self.epsilon_min, temperature)
         return self.epsilon
