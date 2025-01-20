@@ -15,15 +15,15 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-games = 10
+games = 100
 if __name__ == "__main__":
 
-    with open('model.pkl', 'rb') as file:
+    with open('models/4x4/qtable_black_20000.pkl', 'rb') as file:
         restored_qtable = pickle.load(file)
 
     black = QTableAgent(Player.BLACK, restored_qtable)
-    white = RandomAgent(Player.WHITE)
-    # white = MinimaxAgent(Player.WHITE, 2)
+    # white = RandomAgent(Player.WHITE)
+    white = MinimaxAgent(Player.WHITE, 10)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
     for i in tqdm(range(games), desc="Playing games"):
         game_manager = GameManager(black, white)
@@ -32,6 +32,8 @@ if __name__ == "__main__":
     print(f"BLACK wins: ", wins[Player.BLACK])
     print(f"WHITE wins: ", wins[Player.WHITE])
 
+    print("=============================================================")
+    print(f"BLACK performance: ", wins[Player.BLACK] / games)
     sys.exit()
 
 

@@ -18,8 +18,8 @@ from v1.position import Position, SkipPosition
 from v1.random_agent import RandomAgent
 
 WIN_VALUE = 1.0
-DRAW_VALUE = 0.0
-LOSS_VALUE = -1.0
+DRAW_VALUE = 0.5
+LOSS_VALUE = 0.0
 
 DEFAULT_Q_VALUE = 1.0
 
@@ -122,7 +122,7 @@ class DQNTrain:
                  discount_factor=1.0,
                  epsilon=0.7,
                  train_agent=RandomAgent(Player.BLACK),
-                 opponent_agent=RandomAgent(Player.WHITE),
+                 opponent_agents=[RandomAgent(Player.WHITE)],
                  reward_decay=0.9,
                  memory_size=1000,
                  batch_size=64,
@@ -141,9 +141,11 @@ class DQNTrain:
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.epsilon = epsilon
+        self.opponent_agents = opponent_agents
+        self.train_agent = train_agent
         self.agents = {
-            Player.BLACK: train_agent if train_agent.player == Player.BLACK else opponent_agent,
-            Player.WHITE: opponent_agent if opponent_agent.player == Player.WHITE else train_agent
+            Player.BLACK: self.train_agent if self.train_agent.player == Player.BLACK else self.opponent_agents[0],
+            Player.WHITE: self.opponent_agents[0] if self.opponent_agents[0].player == Player.WHITE else self.train_agent
         }
         self.train_agent = train_agent
         self.episode = 0
@@ -170,7 +172,7 @@ class DQNTrain:
         self.epsilon_min = epsilon_min
         self.epsilon_decay = np.exp(np.log(epsilon_min / epsilon) / total_games)
         self.recent_avg_reward = 0
-        self.epsilon_hostory = []
+        self.epsilon_history = []
 
     def initialize_model(self):
         """
@@ -192,7 +194,7 @@ class DQNTrain:
 
         model = DQN(input_dim, output_dim, self.hidden_dim)
         optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=self.total_games/100, gamma=0.85)
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=int(self.total_games/100), gamma=0.85)
 
         for layer in model.children():
             if isinstance(layer, nn.Linear):
@@ -226,6 +228,7 @@ class DQNTrain:
         self.is_exploration = True
         for game in tqdm(range(self.total_games), desc="Training DQN"):
             # print("Game/Total games {}/{}".format(game + 1, self.total_games))
+            self.rotate_opponent_agents()
             self.play_game()
             self.update_epsilon_boltzmann(game)
 
@@ -394,12 +397,18 @@ class DQNTrain:
             next_states = torch.tensor(next_states, dtype=torch.float32)
             dones = torch.tensor(dones, dtype=torch.float32)
 
-            # Compute Q-values and targets
+            # Compute Q-values
             f = lambda x: one_hot_encoding_to_idx(x)
             actions_unsqueeze = torch.tensor(actions.unsqueeze(1), dtype=torch.long).apply_(f)
-
             q_values = self.model(states).gather(1, actions_unsqueeze).squeeze(1)
-            next_q_values = self.target_model(next_states).max(1)[0]
+
+            # # Next state q value Single Q learning
+            # next_q_values = self.target_model(next_states).max(1)[0]
+
+            # Next state q value Double Q learning
+            next_q_values_online = self.model(next_states).argmax(1).unsqueeze(1)
+            next_q_values = self.target_model(next_states).gather(1, next_q_values_online).squeeze(1)
+
             # Compute targets using Bellmans equation
             # For the end states we don't add the discounted future rewards
             targets = rewards + (1 - dones) * self.discount_factor * next_q_values
@@ -448,20 +457,29 @@ class DQNTrain:
         print("\n")
 
     def print_stats(self):
-        plt.plot(self.epoch_q_value_changes)
-        plt.title("Average Q-value Change Per Epoch")
-        plt.xlabel("Epoch")
-        plt.ylabel("Average Q-value Change")
-        plt.show()
-        plt.plot(self.illegal_moves)
-        plt.title("Illegal moves")
-        plt.xlabel("Epoch")
-        plt.ylabel("Volume of illegal moves")
-        plt.show()
-        plt.plot(self.epsilon_hostory)
-        plt.title("Epsilon history")
-        plt.xlabel("Epoch")
-        plt.ylabel("Epsilon history")
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+        axs[0, 0].plot(self.epoch_q_value_changes)
+        axs[0, 0].set_title("Average Q-value Change Per Epoch")
+        axs[0, 0].set_xlabel("Epoch")
+        axs[0, 0].set_ylabel("Average Q-value Change")
+
+        axs[0, 1].plot(self.illegal_moves)
+        axs[0, 1].set_title("Illegal Moves")
+        axs[0, 1].set_xlabel("Epoch")
+        axs[0, 1].set_ylabel("Volume of Illegal Moves")
+
+        axs[1, 0].plot(self.epsilon_history)
+        axs[1, 0].set_title("Epsilon History")
+        axs[1, 0].set_xlabel("Epoch")
+        axs[1, 0].set_ylabel("Epsilon")
+
+        # axs[1, 1].plot(self.learning_rates)
+        # axs[1, 1].set_title("Learning Rates History")
+        # axs[1, 1].set_xlabel("Epoch")
+        # axs[1, 1].set_ylabel("Learning Rate")
+
+        plt.tight_layout()
         plt.show()
 
 
@@ -476,8 +494,8 @@ class DQNTrain:
             float: Updated epsilon value.
         """
         if (current_step + 1) % (self.total_games / 10) == 0:
-            self.epsilon = max(self.epsilon_min, max(0, self.epsilon - 0.1))
-        self.epsilon_hostory.append(self.epsilon)
+            self.epsilon = max(self.epsilon_min, max(0.0, self.epsilon - 0.1))
+        self.epsilon_history.append(self.epsilon)
         return self.epsilon
 
     def update_epsilon_boltzmann(self, current_step, decay_rate=0.0000000001):
@@ -494,7 +512,7 @@ class DQNTrain:
         """
         temperature = self.epsilon * math.exp(-decay_rate * current_step)
         self.epsilon = max(self.epsilon_min, temperature)
-        self.epsilon_hostory.append(self.epsilon)
+        self.epsilon_history.append(self.epsilon)
         return self.epsilon
 
     def update_epsilon_adaptive(self, threshold=0.2):
@@ -502,4 +520,11 @@ class DQNTrain:
             self.epsilon = min(1.0, self.epsilon * 1.001)  # Slightly increase exploration
         else:
             self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-        self.epsilon_hostory.append(self.epsilon)
+        self.epsilon_history.append(self.epsilon)
+
+    def rotate_opponent_agents(self):
+        self.opponent_agents = self.opponent_agents[1:] + [self.opponent_agents[0]]
+        self.agents = {
+            Player.BLACK: self.train_agent if self.train_agent.player == Player.BLACK else self.opponent_agents[0],
+            Player.WHITE: self.opponent_agents[0] if self.opponent_agents[0].player == Player.WHITE else self.train_agent
+        }

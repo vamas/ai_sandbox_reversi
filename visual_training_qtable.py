@@ -19,19 +19,19 @@ DEFAULT_Q_VALUE = 0.0
 games = 10
 if __name__ == "__main__":
 
-    total_games = 40000
+    total_games = 50000
 
     training = QTableTrain(total_games=total_games,
-                           epsilon=0.9999,
-                           learning_rate=0.1,
+                           epsilon=1.0,
+                           learning_rate=0.01,
                            discount_factor=0.5,
-                           train_agent=RandomAgent(Player.WHITE),
-                           opponent_agent=RandomAgent(Player.BLACK),
+                           train_agent=RandomAgent(Player.BLACK),
+                           opponent_agent=RandomAgent(Player.WHITE),
                            qtable=SingleQTable(DEFAULT_Q_VALUE),
-                           reward_decay=0.5)
+                           reward_decay=0.9)
     qtable = training.train()
     training.print_stats()
-    with open("qtable_white_{}.pkl".format(total_games), 'wb') as file:
+    with open("models/qtable_black_{}.pkl".format(total_games), 'wb') as file:
         pickle.dump(qtable, file)
     print("Training completed!. Size of qtable: {}".format(qtable.qtable_size()))
 

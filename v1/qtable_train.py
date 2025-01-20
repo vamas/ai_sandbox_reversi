@@ -1,8 +1,10 @@
 # Train qtable agent against random agent
+import math
 from idlelib.pyparse import trans
 import random
 import matplotlib.pyplot as plt
 from sympy.printing.precedence import precedence
+from tqdm import tqdm
 
 from v1.agent import AgentType
 from v1.dqn_replaybuffer import ReplayBuffer
@@ -15,8 +17,8 @@ from v1.qtable_double import DoubleQTable
 from v1.random_agent import RandomAgent
 
 WIN_VALUE = 1.0
-DRAW_VALUE = -0.1
-LOSS_VALUE = -1.0
+DRAW_VALUE = 0.5
+LOSS_VALUE = 0.0
 
 DEFAULT_Q_VALUE = 0.0
 
@@ -51,7 +53,8 @@ class QTableTrain:
                  train_agent=RandomAgent(Player.BLACK),
                  opponent_agent=RandomAgent(Player.WHITE),
                  reward_decay=0.9,
-                 memory_size=10000):
+                 memory_size=10000,
+                 epsilon_min=0.1):
         # We use RandomAgent to choose random moves when exploring
         self.qtable = qtable
         self.total_games = total_games
@@ -73,30 +76,54 @@ class QTableTrain:
         self.updated_qvalues_count = 0
         self.updated_qvalue_updates_total = 0
         self.replay_buffer = None
+        self.epsilon_history = []
+        self.learning_rate_history = []
+        self.epsilon_min = epsilon_min
 
     def train(self):
         self.qtable.start()
         self.replay_buffer = QTableReplayBuffer(self.memory_size)
-        epsilon = self.epsilon
-        for epoch in range(1):
-            self.epsilon = epsilon
-            self.episode = 0
-            self.total_rewards = []
-            self.avg_q_values = []
-            for game in range(self.total_games):
-                print("Game {}/{}".format(game + 1, self.total_games))
-                self.play_game()
+        self.total_rewards = []
+        self.avg_q_values = []
+        for game in tqdm(range(self.total_games), desc="Training DQN"):
+            # print("Game {}/{}".format(game + 1, self.total_games))
+            self.play_game()
+            self.update_epsilon(game)
 
-                if self.replay_buffer.is_buffer_ready:
-                    print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.data_points))
-                    self.train_model(self.replay_buffer)
+            if self.replay_buffer.is_buffer_ready:
+                # print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.data_points))
+                self.train_model(self.replay_buffer)
 
-                if (game + 1) % (self.total_games / 10) == 0:
-                    self.epsilon = max(0, self.epsilon - 0.1)
-                if random.random() < self.epsilon:
-                    self.is_exploration = True
-                else:
-                    self.is_exploration = False
+            # if (game + 1) % (self.total_games / 10) == 0:
+            #     self.epsilon = max(0, self.epsilon - 0.1)
+            if random.random() < self.epsilon:
+                self.is_exploration = True
+            else:
+                self.is_exploration = False
+
+            self.epsilon_history.append(self.epsilon)
+            self.learning_rate_history.append(self.learning_rate)
+
+        # epsilon = self.epsilon
+        # for epoch in range(1):
+        #     self.epsilon = epsilon
+        #     self.episode = 0
+        #     self.total_rewards = []
+        #     self.avg_q_values = []
+        #     for game in tqdm(range(self.total_games), desc="Training DQN"):
+        #         # print("Game {}/{}".format(game + 1, self.total_games))
+        #         self.play_game()
+        #
+        #         if self.replay_buffer.is_buffer_ready:
+        #             # print("Replay buffer is ready. Start training. Size: {}".format(self.replay_buffer.data_points))
+        #             self.train_model(self.replay_buffer)
+        #
+        #         if (game + 1) % (self.total_games / 10) == 0:
+        #             self.epsilon = max(0, self.epsilon - 0.1)
+        #         if random.random() < self.epsilon:
+        #             self.is_exploration = True
+        #         else:
+        #             self.is_exploration = False
 
         self.qtable.finalize()
         return self.qtable
@@ -175,7 +202,7 @@ class QTableTrain:
                                         reward,
                                         game_state_encode(next_state),
                                         done)
-            reward = reward * self.reward_decay
+            reward = (reward * self.reward_decay)
             done = 0
             next_state = game_state
 
@@ -256,15 +283,63 @@ class QTableTrain:
         # plt.grid(True)
         # plt.show()
 
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
         # Plot the average Q-values per episode
-        plt.figure(figsize=(10, 5))
-        plt.plot(range(len(self.avg_q_values)), self.avg_q_values, label='Average Q-value per Episode', color='orange')
-        plt.xlabel('Episode')
-        plt.ylabel('Average Q-value')
-        plt.title('Convergence Chart: Average Q-value Over Time')
-        plt.legend()
-        plt.grid(True)
+        axs[0, 0].plot(range(len(self.avg_q_values)), self.avg_q_values, label='Average Q-value per Episode', color='orange')
+        axs[0, 0].set_xlabel('Episode')
+        axs[0, 0].set_ylabel('Average Q-value')
+        axs[0, 0].set_title('Convergence Chart: Average Q-value Over Time')
+
+        axs[0, 1].plot(self.epsilon_history)
+        axs[0, 1].set_title("Epsilon History")
+        axs[0, 1].set_xlabel("Epoch")
+        axs[0, 1].set_ylabel("Epsilon History")
+
+        axs[1, 0].plot(self.learning_rate_history)
+        axs[1, 0].set_title("Learning Rate History")
+        axs[1, 0].set_xlabel("Epoch")
+        axs[1, 0].set_ylabel("Learning Rate History")
+
+        axs[1, 1].plot(range(len(self.total_rewards)), self.total_rewards, label='Total Reward per Episode')
+        axs[1, 1].set_title("Total rewards per episode")
+        axs[1, 1].set_xlabel("Epoch")
+        axs[1, 1].set_ylabel("Total rewards")
+
+        plt.tight_layout()
         plt.show()
+
+    def update_epsilon(self, current_step):
+        """
+        Update epsilon
+
+        Args:
+           current_step (int): Current step or episode number.
+
+        Returns:
+            float: Updated epsilon value.
+        """
+        if (current_step + 1) % (self.total_games / 10) == 0:
+            self.epsilon = max(self.epsilon_min, max(0.0, self.epsilon - 0.1))
+        self.epsilon_history.append(self.epsilon)
+        return self.epsilon
+
+    def update_epsilon_boltzmann(self, current_step, decay_rate=0.0000000001):
+        """
+        Update epsilon using Boltzmann exploration policy.
+
+        Args:
+            min_epsilon (float): Minimum value of epsilon.
+            decay_rate (float): Decay rate for epsilon.
+            current_step (int): Current step or episode number.
+
+        Returns:
+            float: Updated epsilon value.
+        """
+        temperature = self.epsilon * math.exp(-decay_rate * current_step)
+        self.epsilon = max(self.epsilon_min, temperature)
+        self.epsilon_history.append(self.epsilon)
+        return self.epsilon
 
 
     def print_board(self, game_state):

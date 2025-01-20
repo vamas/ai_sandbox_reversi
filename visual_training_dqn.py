@@ -1,4 +1,5 @@
 import os
+import pickle
 import sys
 import torch
 
@@ -6,11 +7,14 @@ from v1.dqn_agent import DQNAgent
 from v1.dqn_train_new import DQNTrain
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
+from v1.qtable_agent import QTableAgent
 from v1.random_agent import RandomAgent
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
+
+models_path = "models/4x4/"
 
 games = 1
 if __name__ == "__main__":
@@ -25,25 +29,34 @@ if __name__ == "__main__":
     # epochs = 1
     # batch_size = 64
 
-    total_games_ar = [10000]
+    total_games_ar = [50000]
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.9
     learning_rate = 0.001
     epsilon_min = 0.01
-    memory_size = 256
+    memory_size = 100
     epochs = 1
     batch_size = 64
-    hidden_dim = 4096
+    hidden_dim = 64
     for total_games in total_games_ar:
         print("Create baseline models. BLACK {}".format(total_games))
+        white_model = torch.load("{}dqn_white_model_full_100000.pth".format(models_path))
+        with open('{}qtable_white_40000.pkl'.format(models_path), 'rb') as file:
+            restored_qtable = pickle.load(file)
+
         # Initialize the model for an 8x8 Othello board black
         training = DQNTrain(total_games=total_games,
                                epsilon=epsilon,
                                learning_rate=learning_rate,
                                discount_factor=discount_factor,
                                train_agent=RandomAgent(Player.BLACK),
-                               opponent_agent=RandomAgent(Player.WHITE),
+                               opponent_agents=[
+                                                RandomAgent(Player.WHITE),
+                                                DQNAgent(Player.WHITE, white_model),
+                                                QTableAgent(Player.WHITE, restored_qtable),
+                                                MinimaxAgent(Player.WHITE, 2)
+                                                ],
                                reward_decay=reward_decay,
                                memory_size=memory_size,
                                batch_size=batch_size,
@@ -52,24 +65,31 @@ if __name__ == "__main__":
                                epsilon_min=epsilon_min,
                                hidden_dim=hidden_dim)
         model_black = training.train_dqn()
-        training.print_stats()
+        # training.print_stats()
         # Save the model
         print("Saving model to {}".format("dqn_black_model_full_{}.pth".format(total_games)))
-        torch.save(model_black, "dqn_black_model_full_{}.pth".format(total_games))
+        torch.save(model_black, "{}dqn_black_model_full_{}.pth".format(models_path, total_games))
 
-        # # Initialize the model for an 8x8 Othello board white
         # print("Create baseline models. WHITE {}".format(total_games))
+        # # Initialize the model for an 8x8 Othello board black
         # training = DQNTrain(total_games=total_games,
         #                     epsilon=epsilon,
         #                     learning_rate=learning_rate,
         #                     discount_factor=discount_factor,
         #                     train_agent=RandomAgent(Player.WHITE),
         #                     opponent_agent=RandomAgent(Player.BLACK),
-        #                     reward_decay=reward_decay)
-        # model_white = training.train_dqn()
+        #                     reward_decay=reward_decay,
+        #                     memory_size=memory_size,
+        #                     batch_size=batch_size,
+        #                     model=None,
+        #                     epochs=epochs,
+        #                     epsilon_min=epsilon_min,
+        #                     hidden_dim=hidden_dim)
+        # model_black = training.train_dqn()
         # training.print_stats()
-        # # Save the model.
-        # torch.save(model_white, "dqn_white_model_full_{}.pth".format(total_games))
+        # # Save the model
+        # print("Saving model to {}".format("dqn_white_model_full_{}.pth".format(total_games)))
+        # torch.save(model_black, "models/dqn_white_model_full_{}.pth".format(total_games))
 
 
 
