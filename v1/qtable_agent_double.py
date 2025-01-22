@@ -10,6 +10,9 @@ class DoubleQTableAgent(Agent):
         super().__init__(player, AgentType.COMPUTER)
         self.qtable = qtable
 
+    def name(self):
+        return "DoubleQTableAgent"
+
     def get_best_move(self, game_state):
         # TODO: Implement the get_best_move method for the QTableAgent choosing the best move based on the Q-table.
         if not game_state.legal_moves.keys():

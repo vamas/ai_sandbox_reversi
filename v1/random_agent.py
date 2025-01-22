@@ -4,8 +4,8 @@ from v1.position import SkipPosition
 from v1.agent import Agent, AgentType
 
 class RandomAgent(Agent):
-    def __init__(self, player):
-        super().__init__(player, AgentType.COMPUTER)
+    def __init__(self, player, name="RandomAgent"):
+        super().__init__(player, AgentType.COMPUTER, name)
 
     def get_best_move(self, game_state):
         if not game_state.legal_moves.keys():

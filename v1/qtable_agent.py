@@ -4,8 +4,8 @@ from v1.position import SkipPosition, Position
 from v1.qtable_train import game_state_hash
 
 class QTableAgent(Agent):
-    def __init__(self, player, qtable):
-        super().__init__(player, AgentType.COMPUTER)
+    def __init__(self, player, qtable, name="QTableAgent"):
+        super().__init__(player, AgentType.COMPUTER, name)
         self.qtable = qtable
 
     def get_best_move(self, game_state):

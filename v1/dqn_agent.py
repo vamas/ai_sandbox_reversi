@@ -3,14 +3,13 @@ import random
 import torch
 
 from v1.agent import Agent, AgentType
-from v1.dqn_train_new import position_one_hot_decode, game_state_one_hot_encode, game_state_one_hot_decode, \
-    action_encode, action_decode, one_hot_encoding_to_idx, position_one_hot_encode
+from v1.dqn_helpers import (BOARD_SHAPE, game_state_one_hot_encode, position_one_hot_encode,
+                            action_decode, one_hot_encoding_to_idx)
 from v1.position import SkipPosition
-from v1.qtable_train import game_state_hash
 
 class DQNAgent(Agent):
-    def __init__(self, player, model):
-        super().__init__(player, AgentType.COMPUTER)
+    def __init__(self, player, model, name="DQNAgent"):
+        super().__init__(player, AgentType.COMPUTER, name)
         self.model = model
 
     def get_best_move(self, game_state):

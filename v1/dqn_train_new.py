@@ -11,11 +11,15 @@ from torch.optim import lr_scheduler
 from tqdm import tqdm
 
 from v1.dqn import DQN
+from v1.dqn_agent import DQNAgent
+from v1.dqn_helpers import (BOARD_SHAPE, game_state_one_hot_encode, position_one_hot_encode,
+                            action_decode, one_hot_encoding_to_idx)
 from v1.dqn_replaybuffer import ReplayBuffer
 from v1.gamestate import GameState, print_board
 from v1.player import Player, opponent
 from v1.position import Position, SkipPosition
 from v1.random_agent import RandomAgent
+
 
 WIN_VALUE = 1.0
 DRAW_VALUE = 0.5
@@ -23,87 +27,6 @@ LOSS_VALUE = 0.0
 
 DEFAULT_Q_VALUE = 1.0
 
-BOARD_SHAPE = 4
-
-def game_state_one_hot_encode(game_state, shape=BOARD_SHAPE):
-    if game_state is None:
-        return np.zeros(shape * shape + shape * shape, dtype=float)
-    state = np.zeros(game_state.Rows * game_state.Cols + game_state.Rows * game_state.Cols, dtype=float)
-    for row in range(game_state.Rows):
-        for col in range(game_state.Cols):
-            if game_state.board[row][col] != Player.NONE:
-                idx = row * game_state.Cols + col
-                if game_state.board[row][col] == Player.BLACK:
-                    state[idx] = 1
-                elif game_state.board[row][col] == Player.WHITE:
-                    state[idx + shape * shape] = 1
-    return state.flatten()
-
-def game_state_one_hot_decode(encoded_state, shape=BOARD_SHAPE):
-    """
-    Decode a one-hot encoded game state back to a GameState object.
-
-    Args:
-        encoded_state (np.array): One-hot encoded game state.
-        shape (int): The shape of the board (default is BOARD_SHAPE).
-
-    Returns:
-        GameState: The decoded GameState object.
-    """
-    board = np.zeros((shape, shape), dtype=int)
-    half = shape * shape
-    for idx in range(half):
-        row = idx // shape
-        col = idx % shape
-        if encoded_state[idx] == 1:
-            board[row][col] = Player.BLACK
-        elif encoded_state[idx + half] == 1:
-            board[row][col] = Player.WHITE
-    return GameState(board=board)
-
-def position_one_hot_encode(position, shape=BOARD_SHAPE):
-    if position.row == -1 and position.col == -1:
-        return 1 << 16
-    return 1 << (position.row * shape + position.col)
-
-def position_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
-    if action_encoded == (1 << 16):
-        return SkipPosition()
-    index = int(math.log2(action_encoded))
-    x = index // shape
-    y = index % shape
-    return Position(x, y)
-
-# def action_one_hot_encode(position, shape=BOARD_SHAPE):
-#     if position.row == -1 and position.col == -1:
-#         return
-#     return (position.row << 2) | position.col
-#
-# def action_one_hot_decode(action_encoded, shape=BOARD_SHAPE):
-#     x = (action_encoded >> 2) & 0b11
-#     y = action_encoded & 0b11
-#     return Position(x, y)
-
-def one_hot_encoding_to_idx(encoded):
-    if encoded == (1 << 16):
-        return 16
-    return int(math.log2(encoded))
-
-
-# def action_encode(move_info, shape=BOARD_SHAPE):
-#     if move_info.position.row == -1 and move_info.position.col == -1:
-#         return shape*shape
-#     return shape * move_info.position.row + move_info.position.col
-
-def action_encode(position, shape=BOARD_SHAPE):
-    if position.row == -1 and position.col == -1:
-        return shape*shape
-    return shape * position.row + position.col
-
-def action_decode(action_encoded, shape=BOARD_SHAPE):
-    if action_encoded == shape*shape:
-        return SkipPosition()
-    return Position(action_encoded // shape, action_encoded % shape)
 
 # - Play game
 # - Make first training move
@@ -121,14 +44,15 @@ class DQNTrain:
                  learning_rate=0.4,
                  discount_factor=1.0,
                  epsilon=0.7,
-                 train_agent=RandomAgent(Player.BLACK),
+                 # train_agent=RandomAgent(Player.BLACK),
                  opponent_agents=[RandomAgent(Player.WHITE)],
                  reward_decay=0.9,
                  memory_size=1000,
                  batch_size=64,
                  model=None,
                  epochs=1,
-                 epsilon_min=0.1):
+                 epsilon_min=0.1,
+                 self_instances=1):
         """
         Initialize the Deep Q-Network.
 
@@ -142,12 +66,7 @@ class DQNTrain:
         self.discount_factor = discount_factor
         self.epsilon = epsilon
         self.opponent_agents = opponent_agents
-        self.train_agent = train_agent
-        self.agents = {
-            Player.BLACK: self.train_agent if self.train_agent.player == Player.BLACK else self.opponent_agents[0],
-            Player.WHITE: self.opponent_agents[0] if self.opponent_agents[0].player == Player.WHITE else self.train_agent
-        }
-        self.train_agent = train_agent
+        self.train_agent = RandomAgent(Player.BLACK)
         self.episode = 0
         self.total_rewards = []
         self.avg_q_values = []
@@ -173,6 +92,17 @@ class DQNTrain:
         self.epsilon_decay = np.exp(np.log(epsilon_min / epsilon) / total_games)
         self.recent_avg_reward = 0
         self.epsilon_history = []
+        self.learning_rate_history = []
+        self.agents = {}
+        self.self_instances = self_instances
+
+        # # Add training agent to the end of the list to include playing against itself
+        # self.opponent_agents.append(DQNAgent(Player.WHITE, self.target_model))
+        # self.agents = {
+        #     Player.BLACK: self.train_agent if self.train_agent.player == Player.BLACK else self.opponent_agents[0],
+        #     Player.WHITE: self.opponent_agents[0] if self.opponent_agents[
+        #                                                  0].player == Player.WHITE else self.train_agent
+        # }
 
     def initialize_model(self):
         """
@@ -194,7 +124,7 @@ class DQNTrain:
 
         model = DQN(input_dim, output_dim, self.hidden_dim)
         optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=int(self.total_games/100), gamma=0.85)
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=int(self.total_games/10), gamma=0.85)
 
         for layer in model.children():
             if isinstance(layer, nn.Linear):
@@ -243,6 +173,7 @@ class DQNTrain:
                 self.illegal_moves.append(self.epoch_illegal_moves)
                 self.epoch_illegal_moves = 0
             if game % self.target_update_freq == 0:
+                self.add_trained_model_to_opponents(self.target_model)
                 self.target_model.load_state_dict(self.model.state_dict())
 
             # print("Epsilon: {}", self.epsilon)
@@ -438,8 +369,7 @@ class DQNTrain:
 
             # Update learning rate
             self.scheduler.step()
-            # current_lr = self.optimizer.param_groups[0]['lr']
-            # print(f"Current Learning Rate: {current_lr}")
+            self.learning_rate_history.append(self.optimizer.param_groups[0]['lr'])
 
         # self.replay_buffer.purge()
 
@@ -474,10 +404,10 @@ class DQNTrain:
         axs[1, 0].set_xlabel("Epoch")
         axs[1, 0].set_ylabel("Epsilon")
 
-        # axs[1, 1].plot(self.learning_rates)
-        # axs[1, 1].set_title("Learning Rates History")
-        # axs[1, 1].set_xlabel("Epoch")
-        # axs[1, 1].set_ylabel("Learning Rate")
+        axs[1, 1].plot(self.learning_rate_history)
+        axs[1, 1].set_title("Learning Rates History")
+        axs[1, 1].set_xlabel("Epoch")
+        axs[1, 1].set_ylabel("Learning Rate")
 
         plt.tight_layout()
         plt.show()
@@ -521,6 +451,10 @@ class DQNTrain:
         else:
             self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
         self.epsilon_history.append(self.epsilon)
+
+    def add_trained_model_to_opponents(self, model):
+        if not "Self" in [e.__str__() for e in self.opponent_agents]:
+            self.opponent_agents.extend([DQNAgent(Player.WHITE, model, "Self")] * self.self_instances)
 
     def rotate_opponent_agents(self):
         self.opponent_agents = self.opponent_agents[1:] + [self.opponent_agents[0]]

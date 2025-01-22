@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # epochs = 1
     # batch_size = 64
 
-    total_games_ar = [50000]
+    total_games_ar = [200000]
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.9
@@ -40,22 +40,24 @@ if __name__ == "__main__":
     batch_size = 64
     hidden_dim = 64
     for total_games in total_games_ar:
-        print("Create baseline models. BLACK {}".format(total_games))
-        white_model = torch.load("{}dqn_white_model_full_100000.pth".format(models_path))
-        with open('{}qtable_white_40000.pkl'.format(models_path), 'rb') as file:
-            restored_qtable = pickle.load(file)
+        # print("Create baseline models. BLACK {}".format(total_games))
+        # white_model = torch.load("{}dqn_model_full_100000.pth".format(models_path))
+        # with open('{}qtable_white_40000.pkl'.format(models_path), 'rb') as file:
+        #     restored_qtable = pickle.load(file)
 
         # Initialize the model for an 8x8 Othello board black
         training = DQNTrain(total_games=total_games,
                                epsilon=epsilon,
                                learning_rate=learning_rate,
                                discount_factor=discount_factor,
-                               train_agent=RandomAgent(Player.BLACK),
                                opponent_agents=[
                                                 RandomAgent(Player.WHITE),
-                                                DQNAgent(Player.WHITE, white_model),
-                                                QTableAgent(Player.WHITE, restored_qtable),
-                                                MinimaxAgent(Player.WHITE, 2)
+                                                # RandomAgent(Player.WHITE),
+                                                # DQNAgent(Player.WHITE, white_model),
+                                                # QTableAgent(Player.WHITE, restored_qtable),
+                                                # MinimaxAgent(Player.WHITE, 2),
+                                                MinimaxAgent(Player.WHITE, 3),
+                                                # MinimaxAgent(Player.WHITE, 4),
                                                 ],
                                reward_decay=reward_decay,
                                memory_size=memory_size,
@@ -63,12 +65,13 @@ if __name__ == "__main__":
                                model=None,
                                epochs=epochs,
                                epsilon_min=epsilon_min,
-                               hidden_dim=hidden_dim)
+                               hidden_dim=hidden_dim,
+                               self_instances=1)
         model_black = training.train_dqn()
-        # training.print_stats()
+        training.print_stats()
         # Save the model
-        print("Saving model to {}".format("dqn_black_model_full_{}.pth".format(total_games)))
-        torch.save(model_black, "{}dqn_black_model_full_{}.pth".format(models_path, total_games))
+        print("Saving model to {}".format("dqn_model_full_{}.pth".format(total_games)))
+        torch.save(model_black, "{}dqn_model_full_{}.pth".format(models_path, total_games))
 
         # print("Create baseline models. WHITE {}".format(total_games))
         # # Initialize the model for an 8x8 Othello board black

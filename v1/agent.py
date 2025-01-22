@@ -12,10 +12,14 @@ class AgentType(Enum):
         return hash(self.value)
 
 class Agent(ABC):
-    def __init__(self, player, agent_type):
+    def __init__(self, player, agent_type, name):
         self.player = player
         self.agent_type = agent_type
+        self.name = name
 
     @abstractmethod
     def get_best_move(self, game_state):
         pass
+
+    def __str__(self):
+        return self.name

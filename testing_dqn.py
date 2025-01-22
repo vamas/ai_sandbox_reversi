@@ -15,17 +15,18 @@ DEFAULT_Q_VALUE = 0.0
 
 models_path = "models/4x4/"
 
-games = 100
+games = 1
 if __name__ == "__main__":
 
     b_performance = []
-    black_model = torch.load("{}dqn_black_model_full_50000.pth".format(models_path))
-    # white_model = torch.load("dqn_white_model_full_100000_plus.pth")
+    black_model = torch.load("{}dqn_model_full_100000.pth".format(models_path))
+    white_model = torch.load("{}dqn_model_full_100000.pth".format(models_path))
     black = DQNAgent(Player.BLACK, black_model)
-    # white = DQNAgent(Player.WHITE, white_model)
-    # black = MinimaxAgent(Player.BLACK, 8)
+    white = DQNAgent(Player.WHITE, white_model)
+    # black = RandomAgent(Player.BLACK)
     # white = RandomAgent(Player.WHITE)
-    white = MinimaxAgent(Player.WHITE, 3)
+    # white = MinimaxAgent(Player.WHITE, 7)
+    black = MinimaxAgent(Player.BLACK, 3)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE: 0}
     for i in tqdm(range(games), desc="Playing games"):
         game_manager = GameManager(black, white)

@@ -28,8 +28,8 @@ class GameManager:
         move_info = None
         # self.print_board()
         while not self.game_state.game_over:
-            # print(f"Player: {self.game_state.current_player}")
-            # self.print_board()
+            print(f"Player: {self.game_state.current_player}")
+            self.print_board()
             if self.agents[self.game_state.current_player].agent_type == AgentType.PLAYER:
                 move = self.get_user_move()
                 move_info = self.game_state.make_move(move)
@@ -38,7 +38,7 @@ class GameManager:
                 move_info = self.game_state.make_move(move)
 
         # print("Winner is: ", self.game_state.winner)
-        # self.print_board()
+        self.print_board()
         return self.game_state.winner
 
     def print_board(self):

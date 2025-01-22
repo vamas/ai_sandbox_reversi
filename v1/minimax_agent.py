@@ -5,9 +5,9 @@ from v1.position import SkipPosition
 
 
 class MinimaxAgent(Agent):
-    def __init__(self, player, max_depth):
+    def __init__(self, player, max_depth, name="MinimaxAgent"):
         self.max_depth = max_depth
-        super().__init__(player, AgentType.COMPUTER)
+        super().__init__(player, AgentType.COMPUTER, name)
 
     def get_best_move(self, game_state):
         best_score = -float('inf')
