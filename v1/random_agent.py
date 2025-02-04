@@ -8,8 +8,4 @@ class RandomAgent(Agent):
         super().__init__(player, AgentType.COMPUTER, name)
 
     def get_best_move(self, game_state):
-        if not game_state.legal_moves.keys():
-            return SkipPosition()
-        legal_moves = list(game_state.legal_moves.keys())
-        random_index = random.randint(0, len(legal_moves) - 1)
-        return legal_moves[random_index]
+        return random.choice(game_state.legal_moves_list)

@@ -3,6 +3,49 @@ from v1.agent import Agent, AgentType
 from v1.player import opponent
 from v1.position import SkipPosition
 
+heuristic_weights_8 = [
+    [100,-25,10,5,5,10,-25,100],
+    [-25,-25,2,2,2,2,-25,-25],
+    [10,2,5,1,1,5,2,10],
+    [5,2,1,2,2,1,2,5],
+    [5,2,1,2,2,1,2,5],
+    [10,2,5,1,1,5,2,10],
+    [-25,-25,2,2,2,2,-25,-25],
+    [100,-25,10,5,5,10,-25,100]
+]
+
+heuristic_weights_4 = [
+    [100,-25,-25,100],
+    [-25,2,2,-25],
+    [-25,2,2,-25],
+    [100,-25,-25,100]
+]
+
+def heuristic_fn(game_state):
+    board_shape = game_state.grid_shape
+    heuristic_weights = heuristic_weights_8 if board_shape == 8 else heuristic_weights_4
+    player_count = 0
+    opponent_count = 0
+    for row in range(board_shape):
+        for col in range(board_shape):
+            if game_state.board[row][col] == game_state.current_player:
+                player_count += heuristic_weights[row][col]
+            elif game_state.board[row][col] == opponent(game_state.current_player):
+                opponent_count += heuristic_weights[row][col]
+    return player_count - opponent_count
+
+def terminal_test(game_state):
+    return game_state.game_over
+
+def utility(game_state):
+    w = game_state.winner
+    if w is None:
+        return 0
+    if w == game_state.current_player:
+        return 1
+    else:
+        return -1
+
 
 class MinimaxAgent(Agent):
     def __init__(self, player, max_depth, name="MinimaxAgent"):
@@ -26,11 +69,11 @@ class MinimaxAgent(Agent):
 
     def minimax(self, game_state, is_maximizing = True, a = -float('inf'), b = float('inf'), level = 0):
         # Minimax with alpha-beta pruning
-        if self.terminal_test(game_state):
-            return self.utility(game_state)
+        if terminal_test(game_state):
+            return utility(game_state)
 
         if level == 0:
-            return self.heuristic_fn(game_state)
+            return heuristic_fn(game_state)
 
         available_moves = game_state.legal_moves.keys()
 
@@ -57,45 +100,3 @@ class MinimaxAgent(Agent):
                     break
             return v
 
-    def terminal_test(self, game_state):
-        return game_state.game_over
-
-    def utility(self, game_state):
-        w = game_state.winner
-        if w is None:
-            return 0
-        if w == game_state.current_player:
-            return 1
-        else:
-            return -1
-
-    # def heuristic_fn(self, game_state):
-    #     return 0
-
-    def heuristic_fn(self, game_state):
-        pieces_count = game_state.piece_count
-        player_count = pieces_count[game_state.current_player]
-        opponent_count = pieces_count[opponent(game_state.current_player)]
-
-        # Difference in piece count
-        piece_score = player_count - opponent_count
-
-        # Additional factors like corner control can be added here
-        # Example: if a corner is occupied by the current player, give a bonus score
-        corner_score = 0
-        corners = [(0, 0), (0, 7), (7, 0), (7, 7)]
-        for row, col in corners:
-            if game_state.board[row][col] == game_state.current_player:
-                corner_score += 25  # A large bonus for controlling a corner
-
-        # Outer edges occupied by player give bonus
-        edges_score = 0
-        edges = [(0,0), (0,1), (0,2), (0,3), (0,4), (0,5), (0,6), (0,7),
-                 (7,0), (7,1), (7,2), (7,3), (7,4), (7,5), (7,6), (7,7),
-                 (0,0), (1,0), (2,0), (3,0), (4,0), (5,0), (6,0), (7,0),
-                 (0,7), (1,7), (2,7), (3,7), (4,7), (5,7), (6,7), (7,7)]
-        for row, col in edges:
-            if game_state.board[row][col] == game_state.current_player:
-                edges_score += 5  # A large bonus for controlling a corner
-
-        return piece_score + corner_score + edges_score

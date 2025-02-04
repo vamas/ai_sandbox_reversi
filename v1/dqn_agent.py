@@ -29,7 +29,7 @@ class DQNAgent(Agent):
 
         q_values = self.model(torch.tensor(game_state_one_hot_encode(game_state), dtype=torch.float32).unsqueeze(0))
         # torch.tensor(legal_moves_mask(game_state.legal_actions), dtype=torch.float32)
-        q_values[torch.tensor(legal_moves_mask(game_state.legal_actions), dtype=torch.float32).unsqueeze(0) == 0] = -float("inf")
+        q_values[torch.tensor(legal_moves_mask(game_state.legal_moves_list), dtype=torch.float32).unsqueeze(0) == 0] = -float("inf")
         best_move = action_decode(q_values[0].argmax(axis=0).item())
         # best_move = action_decode(q_values[0].argmax(axis=0).item())
 

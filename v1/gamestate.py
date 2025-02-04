@@ -1,7 +1,4 @@
-from enum import Enum
 from collections import defaultdict
-
-import numpy as np
 
 from v1.player import Player
 from v1.player import opponent
@@ -10,16 +7,16 @@ from v1.moveinfo import MoveInfo
 
 BOARD_SHAPE = 8
 
-Mid1 = (3, 3)
-Mid2 = (4, 4)
-Mid3 = (3, 4)
-Mid4 = (4, 3)
-
-# Mid1 = (2, 1)
-# Mid2 = (1, 2)
-# Mid3 = (2, 2)
-# Mid4 = (1, 1)
-
+if BOARD_SHAPE == 8:
+    Mid1 = (3, 3)
+    Mid2 = (4, 4)
+    Mid3 = (3, 4)
+    Mid4 = (4, 3)
+elif BOARD_SHAPE == 4:
+    Mid1 = (2, 1)
+    Mid2 = (1, 2)
+    Mid3 = (2, 2)
+    Mid4 = (1, 1)
 
 def print_board(game_state):
     for row in game_state.board:
@@ -30,26 +27,32 @@ class GameState:
     Rows = BOARD_SHAPE
     Cols = BOARD_SHAPE
 
+    @property
+    def grid_shape(self):
+        return self.Rows
+
+    @property
+    def free_positions_count(self):
+        return sum(cell == Player.NONE for row in self.board for cell in row)
+
     def __init__(self, board=None, current_player=Player.BLACK):
+        self.board = []
+        self.current_player = None
+        self.piece_count = {Player.BLACK: 0, Player.WHITE: 0}
         if board is None:
             self.init_normal_game()
         else:
-            self.board = board
-            self.current_player = current_player
-            self.piece_count = defaultdict(int)
-            for row in board:
-                for cell in row:
-                    if cell != Player.NONE:
-                        self.piece_count[cell] += 1
-            self.game_over = False
-            self.winner = Player.NONE
-            self.legal_moves = {}
-            self.update_legal_moves()
+            self.init_from_board(board, current_player)
         self.turn_count = 0
         self.double_skip_turns = 0
         self.all_positions = [Position(r, c) for r in range(self.Rows) for c in range(self.Cols)]
         self.all_positions.append(SkipPosition())
         self.illegal_move = False
+        self.winner = Player.NONE
+        self.game_over = False
+        self.legal_moves = {}
+        self.legal_moves_list = []
+        self.update_legal_moves()
 
     def init_normal_game(self):
         self.board = [[Player.NONE for _ in range(self.Cols)] for _ in range(self.Rows)]
@@ -59,64 +62,15 @@ class GameState:
         self.board[Mid4[0]][Mid4[1]] = Player.WHITE
         self.piece_count = {Player.BLACK: 2, Player.WHITE: 2}
         self.current_player = Player.BLACK
-        self.game_over = False
-        self.winner = Player.NONE
-        self.legal_moves = {}
-        self.update_legal_moves()
 
-    def hash_float32(self):
-        hash_value = 0
-        for row in range(self.Rows):
-            for col in range(self.Cols):
-                if self.board[row][col] != Player.NONE:
-                    hash_value = hash_value * 3 + (1 if self.board[row][col] == Player.BLACK else 2)
-        return np.float32(hash_value)
-
-    def reverse_hash_float32(self, hash_value):
-        hash_value = int(hash_value)
-        board = [[Player.NONE for _ in range(self.Cols)] for _ in range(self.Rows)]
-        for row in range(self.Rows - 1, -1, -1):
-            for col in range(self.Cols - 1, -1, -1):
-                if hash_value == 0:
-                    return board
-                value = hash_value % 3
-                hash_value //= 3
-                if value == 1:
-                    board[row][col] = Player.BLACK
-                elif value == 2:
-                    board[row][col] = Player.WHITE
-        return board
-
-
-    def hash(self):
-        hash_value = 17
-        for row in range(self.Rows):
-            for col in range(self.Cols):
-                if self.board[row][col] != Player.NONE:
-                    hash_value = hash_value * 31 + hash((row, col, self.board[row][col]))
-        return str(hash_value)
-
-        # hash_value = 17
-        # hash_value = hash_value * 31 + hash(self.current_player)
-        # hash_value = hash_value * 31 + hash(self.game_over)
-        # hash_value = hash_value * 31 + hash(self.winner)
-        # hash_value = hash_value * 31 + hash(self.turn_count)
-        # hash_value = hash_value * 31 + hash(self.double_skip_turns)
-        #
-        # for player, count in self.piece_count.items():
-        #     hash_value = hash_value * 31 + hash(player)
-        #     hash_value = hash_value * 31 + hash(count)
-        #
-        # for pos, flips in self.legal_moves.items():
-        #     hash_value = hash_value * 31 + hash(pos)
-        #     for flip in flips:
-        #         hash_value = hash_value * 31 + hash(flip)
-        #
-        # for row in self.board:
-        #     for cell in row:
-        #         hash_value = hash_value * 31 + hash(cell)
-        #
-        # return str(hash_value)
+    def init_from_board(self, board, current_player):
+        self.board = board
+        self.current_player = current_player
+        self.piece_count = defaultdict(int)
+        for row in board:
+            for cell in row:
+                if cell != Player.NONE:
+                    self.piece_count[cell] += 1
 
 
     def clone(self):
@@ -134,12 +88,14 @@ class GameState:
     def make_move(self, pos):
         moving_player = self.current_player
 
+        # Check the legality of the move
         if not self.is_move_legal(pos):
             self.game_over = True
             self.winner = opponent(self.current_player)
             self.illegal_move = True
             return MoveInfo(moving_player, pos, [])
 
+        # Check and handle skip move action
         if isinstance(pos, SkipPosition) or pos is None:
             self.double_skip_turns += 1
             self.check_winner()
@@ -202,12 +158,12 @@ class GameState:
 
     def get_flips(self, pos, player):
         flips = []
-        for dir in Position.Directions:
+        for direction in Position.Directions:
             flips_in_dir = []
-            current = Position(pos.row + dir[0], pos.col + dir[1])
+            current = Position(pos.row + direction[0], pos.col + direction[1])
             while self.is_inside_board(current.row, current.col) and self.board[current.row][current.col] == opponent(player):
                 flips_in_dir.append(current)
-                current = Position(current.row + dir[0], current.col + dir[1])
+                current = Position(current.row + direction[0], current.col + direction[1])
             if self.is_inside_board(current.row, current.col) and self.board[current.row][current.col] == player:
                 flips.extend(flips_in_dir)
         return flips
@@ -223,24 +179,10 @@ class GameState:
                         self.legal_moves[pos] = flips
         if not self.legal_moves:
             self.legal_moves = {SkipPosition(): []}
+        self.legal_moves_list = list(self.legal_moves.keys())
         return self.legal_moves
 
-    def grid_shape(self):
-        return self.Rows
-
-    def lookup_legal_action(self, action):
-        for key in self.legal_moves.keys():
-            if key == action:
-                return key
-        return None
-
     def is_move_legal(self, action):
-        return action in self.legal_moves.keys()
+        return action in self.legal_moves_list
 
-    @property
-    def free_positions_count(self):
-        return sum(cell == Player.NONE for row in self.board for cell in row)
 
-    @property
-    def legal_actions(self):
-        return list(self.legal_moves.keys())

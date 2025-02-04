@@ -19,8 +19,8 @@ games = 100
 if __name__ == "__main__":
 
     b_performance = []
-    black_model = torch.load("{}dqn_model_full_300000.pth".format(models_path))
-    white_model = torch.load("{}dqn_model_full_300000.pth".format(models_path))
+    black_model = torch.load("{}dqn_model_full_1000.pth".format(models_path))
+    white_model = torch.load("{}dqn_model_full_1000.pth".format(models_path))
     black = DQNAgent(Player.BLACK, black_model)
     white = DQNAgent(Player.WHITE, white_model)
     # black = RandomAgent(Player.BLACK)
