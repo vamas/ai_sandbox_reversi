@@ -8,17 +8,17 @@ from v1.player import opponent
 from v1.position import Position, SkipPosition
 from v1.moveinfo import MoveInfo
 
-BOARD_SHAPE = 4
+BOARD_SHAPE = 8
 
-# Mid1 = (3, 3)
-# Mid2 = (4, 4)
-# Mid3 = (3, 4)
-# Mid4 = (4, 3)
+Mid1 = (3, 3)
+Mid2 = (4, 4)
+Mid3 = (3, 4)
+Mid4 = (4, 3)
 
-Mid1 = (2, 1)
-Mid2 = (1, 2)
-Mid3 = (2, 2)
-Mid4 = (1, 1)
+# Mid1 = (2, 1)
+# Mid2 = (1, 2)
+# Mid3 = (2, 2)
+# Mid4 = (1, 1)
 
 
 def print_board(game_state):
@@ -47,6 +47,9 @@ class GameState:
             self.update_legal_moves()
         self.turn_count = 0
         self.double_skip_turns = 0
+        self.all_positions = [Position(r, c) for r in range(self.Rows) for c in range(self.Cols)]
+        self.all_positions.append(SkipPosition())
+        self.illegal_move = False
 
     def init_normal_game(self):
         self.board = [[Player.NONE for _ in range(self.Cols)] for _ in range(self.Rows)]
@@ -130,6 +133,12 @@ class GameState:
 
     def make_move(self, pos):
         moving_player = self.current_player
+
+        if not self.is_move_legal(pos):
+            self.game_over = True
+            self.winner = opponent(self.current_player)
+            self.illegal_move = True
+            return MoveInfo(moving_player, pos, [])
 
         if isinstance(pos, SkipPosition) or pos is None:
             self.double_skip_turns += 1
@@ -224,3 +233,14 @@ class GameState:
             if key == action:
                 return key
         return None
+
+    def is_move_legal(self, action):
+        return action in self.legal_moves.keys()
+
+    @property
+    def free_positions_count(self):
+        return sum(cell == Player.NONE for row in self.board for cell in row)
+
+    @property
+    def legal_actions(self):
+        return list(self.legal_moves.keys())

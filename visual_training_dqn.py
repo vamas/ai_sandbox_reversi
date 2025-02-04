@@ -4,6 +4,7 @@ import sys
 import torch
 
 from v1.dqn_agent import DQNAgent
+from v1.dqn_helpers import print_stats
 from v1.dqn_train_new import DQNTrain
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
@@ -27,18 +28,19 @@ if __name__ == "__main__":
     # epsilon_min = 0.01
     # memory_size = 1000
     # epochs = 1
-    # batch_size = 64
+    # batch_size = 25
 
-    total_games_ar = [200000]
-    epsilon = 1.0
+    total_games_ar = [5000]
+    epsilon = 0.1
     discount_factor = 0.1
     reward_decay = 0.9
-    learning_rate = 0.001
-    epsilon_min = 0.01
-    memory_size = 100
+    learning_rate = 0.0001
+    epsilon_min = 0.001
+    memory_size = 10000
     epochs = 1
     batch_size = 64
-    hidden_dim = 64
+    hidden_dim = 512
+
     for total_games in total_games_ar:
         # print("Create baseline models. BLACK {}".format(total_games))
         # white_model = torch.load("{}dqn_model_full_100000.pth".format(models_path))
@@ -55,10 +57,16 @@ if __name__ == "__main__":
                                                 # RandomAgent(Player.WHITE),
                                                 # DQNAgent(Player.WHITE, white_model),
                                                 # QTableAgent(Player.WHITE, restored_qtable),
+                                                MinimaxAgent(Player.WHITE, 2),
                                                 # MinimaxAgent(Player.WHITE, 2),
-                                                MinimaxAgent(Player.WHITE, 3),
                                                 # MinimaxAgent(Player.WHITE, 4),
                                                 ],
+                               testing_agents=[
+                                   RandomAgent(Player.WHITE),
+                                   # MinimaxAgent(Player.WHITE, 1, "Minimax1"),
+                                   # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
+                                   # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
+                               ],
                                reward_decay=reward_decay,
                                memory_size=memory_size,
                                batch_size=batch_size,
@@ -68,7 +76,8 @@ if __name__ == "__main__":
                                hidden_dim=hidden_dim,
                                self_instances=1)
         model_black = training.train_dqn()
-        training.print_stats()
+        stats = training.get_stats()
+        print_stats(stats[0], stats[1], stats[2], stats[3], stats[4], stats[5])
         # Save the model
         print("Saving model to {}".format("dqn_model_full_{}.pth".format(total_games)))
         torch.save(model_black, "{}dqn_model_full_{}.pth".format(models_path, total_games))

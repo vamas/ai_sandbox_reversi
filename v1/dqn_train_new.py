@@ -1,5 +1,7 @@
 # Train qtable agent against random agent
 import math
+import copy
+from collections import deque
 from idlelib.pyparse import trans
 import random
 import matplotlib.pyplot as plt
@@ -13,8 +15,11 @@ from tqdm import tqdm
 from v1.dqn import DQN
 from v1.dqn_agent import DQNAgent
 from v1.dqn_helpers import (BOARD_SHAPE, game_state_one_hot_encode, position_one_hot_encode,
-                            action_decode, one_hot_encoding_to_idx)
+                            action_decode, one_hot_encoding_to_idx, action_encode, legal_moves_one_hot_encode,
+                            legal_moves_mask)
 from v1.dqn_replaybuffer import ReplayBuffer
+from v1.dqn_replaybuffer_prioritized import PrioritizedReplayBuffer
+from v1.gamemanager_console import GameManager
 from v1.gamestate import GameState, print_board
 from v1.player import Player, opponent
 from v1.position import Position, SkipPosition
@@ -22,11 +27,31 @@ from v1.random_agent import RandomAgent
 
 
 WIN_VALUE = 1.0
-DRAW_VALUE = 0.5
+DRAW_VALUE = 0.6
 LOSS_VALUE = 0.0
+ILLEGAL_MOVE_LOSS_VALUE = 0.0
 
-DEFAULT_Q_VALUE = 1.0
+DEFAULT_Q_VALUE = 0.6
 
+
+def play_test_game(agent_black, agent_white, board):
+    """
+    Play a game of Othello
+    When playing a game we make first exploration/exploitation move
+    and then finish up episode playing according to the training player
+    and opponent strategies
+    """
+
+    def play_test_game_turn():
+        for agent in [agent_black, agent_white]:
+            if not game_state.game_over:
+                move = agent.get_best_move(game_state)
+                game_state.make_move(move)
+
+    game_state = GameState(board=copy.deepcopy(board))
+    while not game_state.game_over:
+        play_test_game_turn()
+    return game_state.winner
 
 # - Play game
 # - Make first training move
@@ -45,7 +70,8 @@ class DQNTrain:
                  discount_factor=1.0,
                  epsilon=0.7,
                  # train_agent=RandomAgent(Player.BLACK),
-                 opponent_agents=[RandomAgent(Player.WHITE)],
+                 opponent_agents=[],
+                 testing_agents=[RandomAgent(Player.WHITE)],
                  reward_decay=0.9,
                  memory_size=1000,
                  batch_size=64,
@@ -71,7 +97,7 @@ class DQNTrain:
         self.total_rewards = []
         self.avg_q_values = []
         self.reward_decay = reward_decay
-        self.input_dim = BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE
+        self.input_dim = BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE
         self.output_dim = BOARD_SHAPE * BOARD_SHAPE + 1
         self.hidden_dim = hidden_dim
         self.memory_size = memory_size
@@ -80,7 +106,7 @@ class DQNTrain:
         self.optimizer =None
         self.loss_fn = None
         self.target_model = None
-        self.target_update_freq = 1000. # Update target q-network every other 1000 steps (played games)
+        self.target_update_freq = 1000 # Update target q-network every other 1000 steps (played games)
         self.replay_buffer = None
         self.epoch_q_value_changes = []
         self.is_exploration = True
@@ -88,6 +114,8 @@ class DQNTrain:
         self.epochs = epochs
         self.illegal_moves = []
         self.epoch_illegal_moves = 0
+        self.legal_moves = []
+        self.epoch_legal_moves = 0
         self.epsilon_min = epsilon_min
         self.epsilon_decay = np.exp(np.log(epsilon_min / epsilon) / total_games)
         self.recent_avg_reward = 0
@@ -95,14 +123,13 @@ class DQNTrain:
         self.learning_rate_history = []
         self.agents = {}
         self.self_instances = self_instances
-
-        # # Add training agent to the end of the list to include playing against itself
-        # self.opponent_agents.append(DQNAgent(Player.WHITE, self.target_model))
-        # self.agents = {
-        #     Player.BLACK: self.train_agent if self.train_agent.player == Player.BLACK else self.opponent_agents[0],
-        #     Player.WHITE: self.opponent_agents[0] if self.opponent_agents[
-        #                                                  0].player == Player.WHITE else self.train_agent
-        # }
+        self.testing_agents = testing_agents
+        self.testing_stats = {e.name:[] for e in testing_agents}
+        self.epsilon_max = epsilon
+        self.epsilon_decay_rate = np.log(self.epsilon_min / self.epsilon) / (self.total_games)
+        self.test_boards = deque(maxlen=100)
+        self.add_trained_model_to_opponents(self.target_model)
+        self.training_agent_update_steps = [self.total_games * (i + 1) // 5 for i in range(5)]
 
     def initialize_model(self):
         """
@@ -158,7 +185,7 @@ class DQNTrain:
         self.is_exploration = True
         for game in tqdm(range(self.total_games), desc="Training DQN"):
             # print("Game/Total games {}/{}".format(game + 1, self.total_games))
-            self.rotate_opponent_agents()
+            self.rotate_opponent_agents(game)
             self.play_game()
             self.update_epsilon_boltzmann(game)
 
@@ -170,13 +197,19 @@ class DQNTrain:
             if self.replay_buffer.is_buffer_ready:
                 # print("Train")
                 self.train_model(self.replay_buffer)
-                self.illegal_moves.append(self.epoch_illegal_moves)
+                self.illegal_moves.append(self.epoch_illegal_moves /
+                                          ((self.epoch_legal_moves if self.epoch_legal_moves > 0 else 1) + self.epoch_illegal_moves))
+                self.legal_moves.append(self.epoch_legal_moves)
                 self.epoch_illegal_moves = 0
+                self.epoch_legal_moves = 0
             if game % self.target_update_freq == 0:
-                self.add_trained_model_to_opponents(self.target_model)
+                # self.add_trained_model_to_opponents(self.target_model)
                 self.target_model.load_state_dict(self.model.state_dict())
 
+            self.test_model(game)
             # print("Epsilon: {}", self.epsilon)
+            if game in self.training_agent_update_steps:
+                self.add_trained_model_to_opponents(self.target_model)
         return self.model
 
     def play_game(self):
@@ -188,15 +221,13 @@ class DQNTrain:
         """
         game_state = GameState()
         while not game_state.game_over:
-            game_state_before, move_info = self.make_training_move(game_state)
+            game_state_before, move_info = self.play_turn(game_state)
             game_history = [] # List of (move_info, game_state) tuples
-            # self.print_board(game_state_before)
             if move_info is not None:
-                # self.print_board(game_state_before)
                 game_history.append((move_info, game_state_before))
                 game_episode_state = game_state.clone()
-                winner = self.play_episode(game_episode_state, game_history)
-                self.add_to_replay_buffer(game_history, self.game_result_reward(winner))
+                winner, illegal_move = self.play_episode(game_episode_state, game_history)
+                self.add_to_replay_buffer(game_history, self.game_result_reward(winner, illegal_move))
 
     def play_single_game(self):
         """
@@ -207,11 +238,10 @@ class DQNTrain:
         """
         game_state = GameState()
         game_history = []  # List of (move_info, game_state) tuples
-        while not game_state.game_over:
-            game_state, move_info = self.make_training_move(game_state)
-            game_history.append((move_info, game_state))
-            winner = self.play_episode(game_state, game_history)
-            self.add_to_replay_buffer(game_history, self.game_result_reward(winner))
+        game_state_before, move_info = self.play_turn(game_state)
+        game_history.append((move_info, game_state_before))
+        winner, illegal_move = self.play_episode(game_state, game_history)
+        self.add_to_replay_buffer(game_history, self.game_result_reward(winner, illegal_move))
 
     def play_episode(self, game_state, game_history):
         """
@@ -223,17 +253,19 @@ class DQNTrain:
             Player: The winner of the game
         """
         while not game_state.game_over:
-            # move = self.agents[game_state.current_player].get_best_move(game_state)
-            if game_state.current_player == self.train_agent.player:
-                move = self.choose_action(game_state, override_exploration=False)
-                move_info = game_state.make_move(move)
-                game_history.append((move_info, game_state.clone()))
-            else:
-                move = self.agents[game_state.current_player].get_best_move(game_state)
-                game_state.make_move(move)
+            game_state_before, move_info = self.play_turn(game_state)
+            game_history.append((move_info, game_state_before))
+            # # move = self.agents[game_state.current_player].get_best_move(game_state)
+            # if game_state.current_player == self.train_agent.player:
+            #     move = self.choose_action(game_state, override_exploration=False)
+            #     move_info = game_state.make_move(move)
+            #     game_history.append((move_info, game_state.clone()))
+            # else:
+            #     move = self.agents[game_state.current_player].get_best_move(game_state)
+            #     game_state.make_move(move)
         self.episode += 1
         # self.print_board(game_state)
-        return game_state.winner
+        return game_state.winner, game_state.illegal_move
 
     def add_to_replay_buffer(self, game_history, final_reward):
         """
@@ -247,15 +279,16 @@ class DQNTrain:
         next_state = None
         for move, game_state in reversed(game_history):
             self.replay_buffer.push(game_state_one_hot_encode(game_state),
-                                    position_one_hot_encode(move.position),
+                                    action_encode(move.position),
                                     reward,
                                     game_state_one_hot_encode(next_state),
-                                    done)
+                                    done,
+                                    legal_moves_mask(game_state.legal_actions))
             reward = reward * self.reward_decay
             done = 0
             next_state = game_state
 
-    def make_training_move(self, game_state):
+    def play_turn(self, game_state):
         """
             Make a move for the training agent. If the current player is the training agent, choose an action
             based on the epsilon-greedy policy. If the current player is the opponent, choose the best move based
@@ -270,6 +303,8 @@ class DQNTrain:
         for i in range(2):
             if not game_state.game_over:
                 if game_state.current_player == self.train_agent.player:
+                    if random.random() < 0.1:
+                        self.capture_testing_game(game_state)
                     game_state_before = game_state.clone()
                     move = self.choose_action(game_state)
                     move_info = game_state.make_move(move)
@@ -287,13 +322,14 @@ class DQNTrain:
         Return:
             Position: The chosen action
         """
-        legal_moves = list(game_state.legal_moves.keys())
+        legal_moves = list(game_state.legal_actions)
         is_exploration = self.is_exploration & (not override_exploration)
         if is_exploration:
             # Exploration with preference to unexplored moves
             if legal_moves is None:
                 return SkipPosition()
             return random.choice(legal_moves)
+            # return random.choice(game_state.all_positions)
         else:
             # Exploitation
             with torch.no_grad():
@@ -302,12 +338,16 @@ class DQNTrain:
                 if isinstance(legal_moves[0], SkipPosition):
                     return SkipPosition()
                 q_values = self.model(torch.tensor(game_state_one_hot_encode(game_state), dtype=torch.float32).unsqueeze(0))
+                q_values[torch.tensor(legal_moves_mask(game_state.legal_actions), dtype=torch.float32).unsqueeze(0) == 0] = -float("inf")
                 best_move = action_decode(q_values[0].argmax(axis=0).item())
-                if best_move not in legal_moves:
-                    self.epoch_illegal_moves += 1
+                # if best_move in legal_moves:
+                #     self.epoch_legal_moves += 1
+                # else:
+                #     self.epoch_illegal_moves += 1
                 # Select best move based on highest q-value taking into consideration only legal moves
-                legal_q_values = {move: q_values[0][one_hot_encoding_to_idx(position_one_hot_encode(move))].item() for move in legal_moves}
-                best_move = max(legal_q_values, key=legal_q_values.get)
+                # legal_q_values = {move: q_values[0][one_hot_encoding_to_idx(position_one_hot_encode(move))].item() for move in legal_moves}
+                # legal_q_values = {move: q_values[0][action_encode(move)].item() for move in legal_moves}
+                # best_move = max(legal_q_values, key=legal_q_values.get)
                 return best_move
 
     def train_model(self, replay_buffer):
@@ -319,7 +359,14 @@ class DQNTrain:
         """
         for epoch in range(self.epochs):
             # Sample minibatch
-            states, actions, rewards, next_states, dones = replay_buffer.sample(self.batch_size)
+            # Simple replay buffer
+            states, actions, rewards, next_states, dones, valid_moves = replay_buffer.sample(self.batch_size)
+
+            # # Prioritized replay buffer
+            # beta = 0.4  # Compensation factor for importance sampling
+            # batch, indices, weights = replay_buffer.sample(self.batch_size, beta)
+            # states, actions, rewards, next_states, dones = zip(*batch)
+
 
             # Convert to tensors
             states = torch.tensor(states, dtype=torch.float32)
@@ -327,18 +374,33 @@ class DQNTrain:
             rewards = torch.tensor(rewards, dtype=torch.float32)
             next_states = torch.tensor(next_states, dtype=torch.float32)
             dones = torch.tensor(dones, dtype=torch.float32)
+            valid_moves = torch.tensor(valid_moves, dtype=torch.float32)
 
             # Compute Q-values
-            f = lambda x: one_hot_encoding_to_idx(x)
-            actions_unsqueeze = torch.tensor(actions.unsqueeze(1), dtype=torch.long).apply_(f)
-            q_values = self.model(states).gather(1, actions_unsqueeze).squeeze(1)
+            # f = lambda x: one_hot_encoding_to_idx(x)
+            # actions_unsqueeze = torch.tensor(actions.unsqueeze(1), dtype=torch.long).apply_(f)
+            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
 
             # # Next state q value Single Q learning
             # next_q_values = self.target_model(next_states).max(1)[0]
 
             # Next state q value Double Q learning
-            next_q_values_online = self.model(next_states).argmax(1).unsqueeze(1)
-            next_q_values = self.target_model(next_states).gather(1, next_q_values_online).squeeze(1)
+            # next_q_values_online = self.model(next_states).argmax(1).unsqueeze(1)
+            # next_q_values = self.target_model(next_states).gather(1, next_q_values_online).squeeze(1)
+
+            # Mask Q-values for invalid moves in the next state
+            # next_q_values[valid_moves == 0] = -float("inf")  # Mask invalid actions
+
+            # Next state q value Single Q learning
+            next_q_values = self.target_model(next_states)
+            next_q_values[valid_moves == 0] = -float("inf")  # Mask invalid actions
+            next_q_values = next_q_values.max(1)[0]
+
+            # # Next state q value Double Q learning
+            # next_q_values_online = self.model(next_states)
+            # next_q_values_online[valid_moves == 0] = -float("inf")  # Mask invalid actions
+            # next_q_values = self.target_model(next_states).gather(1, next_q_values_online.argmax(1).unsqueeze(1)).squeeze(1)
+
 
             # Compute targets using Bellmans equation
             # For the end states we don't add the discounted future rewards
@@ -346,7 +408,7 @@ class DQNTrain:
 
             # During training, after computing Q-values
             with torch.no_grad():
-                old_q_values = self.model(states).gather(1, actions_unsqueeze).squeeze(1)  # Shape: [B]
+                old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
             # Calculate Q-value changes
             q_value_changes = torch.abs(old_q_values - targets)
             # Average Q-value change
@@ -373,44 +435,20 @@ class DQNTrain:
 
         # self.replay_buffer.purge()
 
-    def game_result_reward(self, winner):
+    def game_result_reward(self, winner, illegal_move=False):
         if winner == Player.NONE:
             return DRAW_VALUE
         elif winner == self.train_agent.player:
             return WIN_VALUE
         else:
+            if illegal_move:
+                return ILLEGAL_MOVE_LOSS_VALUE
             return LOSS_VALUE
 
-    def print_board(self, game_state):
-        for row in game_state.board:
-            print(' '.join('B' if cell == Player.BLACK else 'W' if cell == Player.WHITE else '.' for cell in row))
-        print("\n")
-
-    def print_stats(self):
-        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
-        axs[0, 0].plot(self.epoch_q_value_changes)
-        axs[0, 0].set_title("Average Q-value Change Per Epoch")
-        axs[0, 0].set_xlabel("Epoch")
-        axs[0, 0].set_ylabel("Average Q-value Change")
-
-        axs[0, 1].plot(self.illegal_moves)
-        axs[0, 1].set_title("Illegal Moves")
-        axs[0, 1].set_xlabel("Epoch")
-        axs[0, 1].set_ylabel("Volume of Illegal Moves")
-
-        axs[1, 0].plot(self.epsilon_history)
-        axs[1, 0].set_title("Epsilon History")
-        axs[1, 0].set_xlabel("Epoch")
-        axs[1, 0].set_ylabel("Epsilon")
-
-        axs[1, 1].plot(self.learning_rate_history)
-        axs[1, 1].set_title("Learning Rates History")
-        axs[1, 1].set_xlabel("Epoch")
-        axs[1, 1].set_ylabel("Learning Rate")
-
-        plt.tight_layout()
-        plt.show()
+    # def print_board(self, game_state):
+    #     for row in game_state.board:
+    #         print(' '.join('B' if cell == Player.BLACK else 'W' if cell == Player.WHITE else '.' for cell in row))
+    #     print("\n")
 
 
     def update_epsilon(self, current_step):
@@ -428,7 +466,7 @@ class DQNTrain:
         self.epsilon_history.append(self.epsilon)
         return self.epsilon
 
-    def update_epsilon_boltzmann(self, current_step, decay_rate=0.0000000001):
+    def update_epsilon_boltzmann(self, current_step):
         """
         Update epsilon using Boltzmann exploration policy.
 
@@ -440,10 +478,13 @@ class DQNTrain:
         Returns:
             float: Updated epsilon value.
         """
-        temperature = self.epsilon * math.exp(-decay_rate * current_step)
-        self.epsilon = max(self.epsilon_min, temperature)
+        # temperature = self.epsilon * math.exp(-self.epsilon_decay_rate * current_step)
+        # self.epsilon = max(self.epsilon_min, temperature)
+        # self.epsilon_history.append(self.epsilon)
+        # return self.epsilon
+        self.epsilon = (self.epsilon_min + (self.epsilon_max - self.epsilon_min) *
+                        np.exp(self.epsilon_decay_rate * current_step))
         self.epsilon_history.append(self.epsilon)
-        return self.epsilon
 
     def update_epsilon_adaptive(self, threshold=0.2):
         if self.recent_avg_reward < threshold:
@@ -453,12 +494,45 @@ class DQNTrain:
         self.epsilon_history.append(self.epsilon)
 
     def add_trained_model_to_opponents(self, model):
-        if not "Self" in [e.__str__() for e in self.opponent_agents]:
-            self.opponent_agents.extend([DQNAgent(Player.WHITE, model, "Self")] * self.self_instances)
+        # if not "Self" in [e.__str__() for e in self.opponent_agents]:
+        self.opponent_agents.extend([DQNAgent(Player.WHITE, model, "Self")] * self.self_instances)
 
-    def rotate_opponent_agents(self):
+    def rotate_opponent_agents(self, game):
         self.opponent_agents = self.opponent_agents[1:] + [self.opponent_agents[0]]
+        # If we play against ourselves - instantiate it from most up to date model
+        if self.opponent_agents[0].name == "Self":
+            self.opponent_agents[0] = DQNAgent(Player.WHITE, self.model, "Self")
         self.agents = {
             Player.BLACK: self.train_agent if self.train_agent.player == Player.BLACK else self.opponent_agents[0],
             Player.WHITE: self.opponent_agents[0] if self.opponent_agents[0].player == Player.WHITE else self.train_agent
         }
+
+    def test_model(self, game, freq=10):
+        if game > 0 and game % freq == 0:
+            for testing_agent in self.testing_agents:
+                wins = 0
+                # boards = [e.copy() for e in tuple(self.test_boards)]
+                for board in self.test_boards:
+                    # active_board = [e for e in board]
+                    winner = play_test_game(DQNAgent(Player.BLACK, self.target_model), testing_agent, board)
+                    if winner == Player.BLACK:
+                        wins += 1
+                # for i in range(games):
+                #     game_manager = GameManager(DQNAgent(Player.BLACK, self.target_model), testing_agent)
+                #     if game_manager.run() == Player.BLACK:
+                #         wins += 1
+                score = wins / len(self.test_boards)
+                self.testing_stats[testing_agent.name].append(score)
+            self.test_boards.clear()
+
+    def get_stats(self):
+        return (self.epoch_q_value_changes,
+                self.illegal_moves,
+                self.epsilon_history,
+                self.learning_rate_history,
+                self.testing_stats,
+                self.legal_moves)
+
+    def capture_testing_game(self, game_state):
+        if game_state.free_positions_count > 5:
+            self.test_boards.append(game_state.board)
