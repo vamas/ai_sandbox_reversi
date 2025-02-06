@@ -15,7 +15,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/4x4/"
+models_path = "models/8x8/"
 
 games = 1
 if __name__ == "__main__":
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # epochs = 1
     # batch_size = 25
 
-    total_games_ar = [40000]
+    total_games_ar = [100000]
     epsilon = 0.5
     discount_factor = 0.1
     reward_decay = 0.9
@@ -57,15 +57,15 @@ if __name__ == "__main__":
                                                 # RandomAgent(Player.WHITE),
                                                 # DQNAgent(Player.WHITE, white_model),
                                                 # QTableAgent(Player.WHITE, restored_qtable),
-                                                # MinimaxAgent(Player.WHITE, 0),
+                                                MinimaxAgent(Player.WHITE, 0),
                                                 # MinimaxAgent(Player.WHITE, 2),
                                                 # MinimaxAgent(Player.WHITE, 4),
                                                 ],
                                testing_agents=[
-                                   RandomAgent(Player.WHITE),
+                                   # RandomAgent(Player.WHITE),
                                    # MinimaxAgent(Player.WHITE, 1, "Minimax1"),
                                    # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
-                                   # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
+                                   MinimaxAgent(Player.WHITE, 2, "Minimax2"),
                                ],
                                reward_decay=reward_decay,
                                memory_size=memory_size,

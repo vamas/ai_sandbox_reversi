@@ -83,6 +83,9 @@ class GameState:
         clone.board = [row[:] for row in self.board]
         clone.piece_count = self.piece_count.copy()
         clone.legal_moves = {pos: flips[:] for pos, flips in self.legal_moves.items()}
+        clone.legal_moves_list = self.legal_moves_list[:]
+        clone.illegal_move = self.illegal_move
+        clone.all_positions = self.all_positions[:]
         return clone
 
     def make_move(self, pos):

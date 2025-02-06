@@ -126,7 +126,7 @@ class DQNTrain:
         self.testing_stats = {e.name:[] for e in testing_agents}
         self.epsilon_max = epsilon
         self.epsilon_decay_rate = np.log(self.epsilon_min / self.epsilon) / (self.total_games)
-        self.test_boards = deque(maxlen=100)
+        self.test_boards = deque(maxlen=10)
         self.add_trained_model_to_opponents(self.target_model)
         self.training_agent_update_steps = [self.total_games * (i + 1) // 5 for i in range(5)]
 
@@ -506,7 +506,7 @@ class DQNTrain:
             Player.WHITE: self.opponent_agents[0] if self.opponent_agents[0].player == Player.WHITE else self.train_agent
         }
 
-    def test_model(self, game, freq=100):
+    def test_model(self, game, freq=2000):
         if game > 0 and game % freq == 0:
             for testing_agent in self.testing_agents:
                 wins = 0
