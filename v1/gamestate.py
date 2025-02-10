@@ -5,7 +5,7 @@ from v1.player import opponent
 from v1.position import Position, SkipPosition
 from v1.moveinfo import MoveInfo
 
-BOARD_SHAPE = 8
+BOARD_SHAPE = 4
 
 if BOARD_SHAPE == 8:
     Mid1 = (3, 3)

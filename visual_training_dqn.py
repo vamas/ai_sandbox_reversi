@@ -15,7 +15,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/8x8/"
+models_path = "models/4x4/"
 
 games = 1
 if __name__ == "__main__":
@@ -31,15 +31,15 @@ if __name__ == "__main__":
     # batch_size = 25
 
     total_games_ar = [100000]
-    epsilon = 0.5
+    epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.9
     learning_rate = 0.0001
     epsilon_min = 0.001
-    memory_size = 1000
+    memory_size = 64
     epochs = 1
     batch_size = 64
-    hidden_dim = 688
+    hidden_dim = 256
 
     for total_games in total_games_ar:
         # print("Create baseline models. BLACK {}".format(total_games))
@@ -62,10 +62,10 @@ if __name__ == "__main__":
                                                 # MinimaxAgent(Player.WHITE, 4),
                                                 ],
                                testing_agents=[
-                                   # RandomAgent(Player.WHITE),
-                                   # MinimaxAgent(Player.WHITE, 1, "Minimax1"),
+                                   RandomAgent(Player.WHITE),
+                                   MinimaxAgent(Player.WHITE, 1, "Minimax1"),
                                    # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
-                                   MinimaxAgent(Player.WHITE, 2, "Minimax2"),
+                                   # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
                                ],
                                reward_decay=reward_decay,
                                memory_size=memory_size,

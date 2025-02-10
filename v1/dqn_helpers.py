@@ -4,13 +4,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from v1.gamestate import GameState
-from v1.player import Player
+from v1.player import Player, opponent
 from v1.position import SkipPosition, Position
 
 
-BOARD_SHAPE = 8
+BOARD_SHAPE = 4
 
-def game_state_one_hot_encode(game_state, shape=BOARD_SHAPE):
+def game_state_one_hot_encode(game_state, training_player, shape=BOARD_SHAPE):
+    """
+        Encode a game state to a one-hot encoded vector.
+    :param game_state: input game state
+    :param shape: board size
+    :return:
+        [My pieces BOARD_SHAPExBOARD_SHAPE] +
+        [Opponent pieces BOARD_SHAPExBOARD_SHAPE] +
+        [Legal moves BOARD_SHAPExBOARD_SHAPE]
+    """
     if game_state is None:
         return np.zeros(shape * shape + shape * shape + shape * shape, dtype=float)
     state = np.zeros(game_state.Rows * game_state.Cols + game_state.Rows * game_state.Cols, dtype=float)
@@ -18,23 +27,16 @@ def game_state_one_hot_encode(game_state, shape=BOARD_SHAPE):
         for col in range(game_state.Cols):
             if game_state.board[row][col] != Player.NONE:
                 idx = row * game_state.Cols + col
-                if game_state.board[row][col] == Player.BLACK:
+                if game_state.board[row][col] == training_player:
                     state[idx] = 1
-                elif game_state.board[row][col] == Player.WHITE:
+                elif game_state.board[row][col] == opponent(training_player):
                     state[idx + shape * shape] = 1
     final_state = np.append(state, legal_moves_one_hot_encode(game_state.legal_moves.keys(), shape))
+    # final_state = np.append(final_state, [game_state.current_player == training_player])
     # final_state = state
     return final_state.flatten()
 
 def legal_moves_one_hot_encode(legal_moves, shape=BOARD_SHAPE):
-    # state = np.zeros(shape * shape + 1, dtype=float)
-    # for move in legal_moves:
-    #     if isinstance(move, SkipPosition):
-    #         state[shape * shape - 1] = 1
-    #     else:
-    #         idx = move.row * shape + move.col
-    #         state[idx] = 1
-    # return state
     state = np.zeros(shape * shape, dtype=float)
     for move in legal_moves:
         if not isinstance(move, SkipPosition):
@@ -52,28 +54,28 @@ def legal_moves_mask(legal_moves, shape=BOARD_SHAPE):
             state[idx] = 1
     return state
 
-
-def game_state_one_hot_decode(encoded_state, shape=BOARD_SHAPE):
-    """
-    Decode a one-hot encoded game state back to a GameState object.
-
-    Args:
-        encoded_state (np.array): One-hot encoded game state.
-        shape (int): The shape of the board (default is BOARD_SHAPE).
-
-    Returns:
-        GameState: The decoded GameState object.
-    """
-    board = np.zeros((shape, shape), dtype=int)
-    half = shape * shape
-    for idx in range(half):
-        row = idx // shape
-        col = idx % shape
-        if encoded_state[idx] == 1:
-            board[row][col] = Player.BLACK
-        elif encoded_state[idx + half] == 1:
-            board[row][col] = Player.WHITE
-    return GameState(board=board)
+#
+# def game_state_one_hot_decode(encoded_state, shape=BOARD_SHAPE):
+#     """
+#     Decode a one-hot encoded game state back to a GameState object.
+#
+#     Args:
+#         encoded_state (np.array): One-hot encoded game state.
+#         shape (int): The shape of the board (default is BOARD_SHAPE).
+#
+#     Returns:
+#         GameState: The decoded GameState object.
+#     """
+#     board = np.zeros((shape, shape), dtype=int)
+#     half = shape * shape
+#     for idx in range(half):
+#         row = idx // shape
+#         col = idx % shape
+#         if encoded_state[idx] == 1:
+#             board[row][col] = Player.BLACK
+#         elif encoded_state[idx + half] == 1:
+#             board[row][col] = Player.WHITE
+#     return GameState(board=board)
 
 def legal_actions_to_binary_mask(legal_actions, shape=BOARD_SHAPE):
     """
@@ -147,7 +149,7 @@ def print_stats(epoch_q_value_changes,
                 training_scores,
                 legal_moves):
 
-    window = 100
+    window = 10
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
@@ -178,7 +180,10 @@ def print_stats(epoch_q_value_changes,
 
     # plot lines
     for agent in training_scores.keys():
-        axs[1, 1].plot(range(len(training_scores[agent])), training_scores[agent], label=agent)
+        training_score = []
+        for ind in range(len(training_scores[agent]) - window + 1):
+            training_score.append(np.mean(training_scores[agent][ind:ind + window]))
+        axs[1, 1].plot(range(len(training_score)), training_score, label=agent)
     axs[1, 1].set_title("Training Scores")
     axs[1, 1].legend()
 
