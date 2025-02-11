@@ -184,7 +184,7 @@ class DQNTrain:
         self.is_exploration = True
         for game in tqdm(range(self.total_games), desc="Training DQN"):
             self.init_game(game, self.training_agent.player)
-            self.play_game()
+            self.play_single_game()
             self.update_epsilon_boltzmann(game)
 
             if random.random() < self.epsilon:
@@ -511,21 +511,30 @@ class DQNTrain:
         if game > 0 and game % freq == 0:
             for testing_agent in self.testing_agents:
                 wins = 0
-                for game in self.test_games:
-                    # print_board(game)
-                    # print("====================================")
-                    board = game.board
+                # for game in self.test_games:
+                #     # print_board(game)
+                #     # print("====================================")
+                #     board = game.board
+                #     agent = DQNAgent(Player.BLACK, self.target_model)
+                #     testing_agent.player = Player.WHITE
+                #     winner = play_test_game(agent, testing_agent, board, game.current_player)
+                #     if winner == Player.BLACK:
+                #         wins += 1
+                # score = wins / len(self.test_games)
+                for i in range(25):
+                    game_state = GameState()
+                    board = game_state.board
                     agent = DQNAgent(Player.BLACK, self.target_model)
                     testing_agent.player = Player.WHITE
-                    winner = play_test_game(agent, testing_agent, board, game.current_player)
+                    winner = play_test_game(agent, testing_agent, board, game_state.current_player)
                     if winner == Player.BLACK:
                         wins += 1
-                score = wins / len(self.test_games)
                 # for i in range(25):
-                #     game_manager = GameManager(DQNAgent(Player.BLACK, self.target_model), testing_agent)
-                #     if game_manager.run() == Player.BLACK:
+                #     testing_agent.player = Player.BLACK
+                #     game_manager = GameManager(DQNAgent(Player.WHITE, self.target_model), testing_agent)
+                #     if game_manager.run() == Player.WHITE:
                 #         wins += 1
-                # score = wins / 25
+                score = wins / 25
                 self.testing_stats[testing_agent.name].append(score)
             self.test_games.clear()
 

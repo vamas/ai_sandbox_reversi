@@ -30,13 +30,13 @@ if __name__ == "__main__":
     # epochs = 1
     # batch_size = 25
 
-    total_games_ar = [100000]
+    total_games_ar = [50000]
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.9
     learning_rate = 0.0001
     epsilon_min = 0.001
-    memory_size = 64
+    memory_size = 1000
     epochs = 1
     batch_size = 64
     hidden_dim = 256
@@ -63,6 +63,7 @@ if __name__ == "__main__":
                                                 ],
                                testing_agents=[
                                    RandomAgent(Player.WHITE),
+                                   MinimaxAgent(Player.WHITE, 0, "Heuristic"),
                                    MinimaxAgent(Player.WHITE, 1, "Minimax1"),
                                    # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
                                    # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
