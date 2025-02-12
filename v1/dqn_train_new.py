@@ -14,13 +14,13 @@ from tqdm import tqdm
 
 from v1.dqn import DQN
 from v1.dqn_agent import DQNAgent
-from v1.dqn_helpers import (BOARD_SHAPE, game_state_one_hot_encode, position_one_hot_encode,
+from v1.dqn_helpers import (game_state_one_hot_encode, position_one_hot_encode,
                             action_decode, one_hot_encoding_to_idx, action_encode, legal_moves_one_hot_encode,
                             legal_moves_mask)
 from v1.dqn_replaybuffer import ReplayBuffer
 from v1.dqn_replaybuffer_prioritized import PrioritizedReplayBuffer
 from v1.gamemanager_console import GameManager
-from v1.gamestate import GameState, print_board
+from v1.gamestate import GameState, print_board, BOARD_SHAPE
 from v1.moveinfo import MoveInfo
 from v1.player import Player, opponent
 from v1.position import Position, SkipPosition
@@ -32,7 +32,7 @@ DRAW_VALUE = 0.6
 LOSS_VALUE = 0.0
 ILLEGAL_MOVE_LOSS_VALUE = 0.0
 
-DEFAULT_Q_VALUE = 0.6
+DEFAULT_Q_VALUE = 0.0
 
 
 def play_test_game(training_agent, testing_agent, board, current_player):
@@ -128,10 +128,12 @@ class DQNTrain:
         self.epsilon_max = epsilon
         self.epsilon_decay_rate = np.log(self.epsilon_min / self.epsilon) / (self.total_games)
         self.test_games = deque(maxlen=50)
-        self.add_trained_model_to_opponents(self.target_model)
         self.training_agent_update_steps = [self.total_games * (i + 1) // 5 for i in range(5)]
         self.training_agent = RandomAgent(Player.BLACK)
         self.opponent_agent = None
+        self.scheduler = None
+        self.initialize_model()
+        self.add_trained_model_to_opponents(self.target_model)
 
     def initialize_model(self):
         """
@@ -151,18 +153,19 @@ class DQNTrain:
         input_dim = self.input_dim  # Flattened board as input
         output_dim = self.output_dim  # Total number of possible actions
 
-        model = DQN(input_dim, output_dim, self.hidden_dim)
-        optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=int(self.total_games/10), gamma=0.85)
+        self.model = DQN(input_dim, output_dim, self.hidden_dim)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/10), gamma=0.85)
 
-        for layer in model.children():
+        for layer in self.model.children():
             if isinstance(layer, nn.Linear):
                 nn.init.xavier_uniform_(layer.weight)
                 nn.init.zeros_(layer.bias)
 
-        loss_fn = nn.SmoothL1Loss()
+        self.target_model = DQN(input_dim, output_dim, self.hidden_dim)
+        self.target_model.load_state_dict(self.model.state_dict())  # Initialize with same weights
 
-        return model, optimizer, loss_fn, scheduler
+        self.loss_fn = nn.SmoothL1Loss()
 
     def train_dqn(self):
         """
@@ -171,12 +174,6 @@ class DQNTrain:
         Return:
             model (DQN): The trained DQN model.
         """
-        if self.model is None:
-            self.model, self.optimizer, self.loss_fn, self.scheduler = self.initialize_model()
-        else:
-            _, self.optimizer, self.loss_fn, self.scheduler = self.initialize_model()
-        self.target_model, _, _, _ = self.initialize_model()
-        self.target_model.load_state_dict(self.model.state_dict())  # Initialize with same weights
         self.replay_buffer = ReplayBuffer(self.memory_size)
         self.epoch_q_value_changes = []
         self.total_rewards = []
@@ -185,7 +182,7 @@ class DQNTrain:
         for game in tqdm(range(self.total_games), desc="Training DQN"):
             self.init_game(game, self.training_agent.player)
             self.play_single_game()
-            self.update_epsilon_boltzmann(game)
+            self.update_epsilon(game)
 
             if random.random() < self.epsilon:
                 self.is_exploration = True
@@ -199,6 +196,7 @@ class DQNTrain:
                 self.legal_moves.append(self.epoch_legal_moves)
                 self.epoch_illegal_moves = 0
                 self.epoch_legal_moves = 0
+
             if game % self.target_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
 
@@ -279,16 +277,7 @@ class DQNTrain:
         reward = final_reward
         done = 1
         next_state = None
-        on_path_reward = reward / len(game_history) if len(game_history) > 0 else 1
         for move, game_state in reversed(game_history):
-            # print(game_state)
-            # print("====================================")
-            # print_board(game_state)
-            # if not next_state is None:
-            #     print_board(next_state)
-            # else:
-            #     print("----N/A----")
-
             self.replay_buffer.push(game_state_one_hot_encode(game_state, self.training_agent.player),
                                     action_encode(move.position),
                                     reward,
@@ -296,7 +285,6 @@ class DQNTrain:
                                     done,
                                     legal_moves_mask(game_state.legal_moves_list))
             reward = reward * self.reward_decay
-            # reward = on_path_reward
             done = 0
             next_state = game_state
 
@@ -314,9 +302,7 @@ class DQNTrain:
             MoveInfo: The move info of the training player
         """
         move_info = None
-        game_state_before = None
         game_state_before = game_state.clone()
-        # move_info = MoveInfo(Player.BLACK, SkipPosition(),[])
         for player in [Player.BLACK, Player.WHITE]:
             if not game_state.game_over:
                 agent = self.select_agent_by_color(player)
@@ -326,10 +312,8 @@ class DQNTrain:
                     move = self.choose_action(game_state)
                     move_info = game_state.make_move(move)
                 else:
-                    # move = self.opponent_agent.get_best_move(game_state)
                     move = self.get_opponents_best_move(game_state, player)
                     game_state.make_move(move)
-        # game_state_before = game_state_before if game_state_before is not None else game_state.clone()
         move_info = move_info if move_info is not None else MoveInfo(self.training_agent.player, SkipPosition(), [])
         return game_state_before, move_info
 
@@ -497,8 +481,8 @@ class DQNTrain:
     def rotate_opponent_agents(self, game):
         self.opponent_agents = self.opponent_agents[1:] + [self.opponent_agents[0]]
         # If we play against ourselves - instantiate it from most up to date model
-        if self.opponent_agents[0].name == "Self":
-            self.opponent_agents[0] = DQNAgent(Player.WHITE, self.model, "Self")
+        # if self.opponent_agents[0].name == "Self":
+        #     self.opponent_agents[0] = DQNAgent(Player.WHITE, self.target_model, "Self")
         self.flip_training_agent_color()
 
     def flip_training_agent_color(self):
@@ -507,7 +491,7 @@ class DQNTrain:
         self.training_agent.player = self.opponent_agents[0].player
         self.opponent_agents[0].player = player
 
-    def test_model(self, game, freq=500):
+    def test_model(self, game, freq=1000):
         if game > 0 and game % freq == 0:
             for testing_agent in self.testing_agents:
                 wins = 0
@@ -529,12 +513,15 @@ class DQNTrain:
                     winner = play_test_game(agent, testing_agent, board, game_state.current_player)
                     if winner == Player.BLACK:
                         wins += 1
-                # for i in range(25):
-                #     testing_agent.player = Player.BLACK
-                #     game_manager = GameManager(DQNAgent(Player.WHITE, self.target_model), testing_agent)
-                #     if game_manager.run() == Player.WHITE:
-                #         wins += 1
-                score = wins / 25
+                for i in range(25):
+                    game_state = GameState()
+                    board = game_state.board
+                    agent = DQNAgent(Player.WHITE, self.target_model)
+                    testing_agent.player = Player.BLACK
+                    winner = play_test_game(agent, testing_agent, board, game_state.current_player)
+                    if winner == Player.WHITE:
+                        wins += 1
+                score = wins / 50
                 self.testing_stats[testing_agent.name].append(score)
             self.test_games.clear()
 

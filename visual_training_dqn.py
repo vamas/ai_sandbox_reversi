@@ -15,7 +15,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/4x4/"
+models_path = "models/8x8/"
 
 games = 1
 if __name__ == "__main__":
@@ -24,22 +24,22 @@ if __name__ == "__main__":
     # epsilon = 1.0
     # discount_factor = 0.1
     # reward_decay = 0.9
-    # learning_rate = 0.001
-    # epsilon_min = 0.01
-    # memory_size = 1000
+    # learning_rate = 0.0001
+    # epsilon_min = 0.001
+    # memory_size = 64
     # epochs = 1
-    # batch_size = 25
+    # batch_size = 64
 
     total_games_ar = [50000]
     epsilon = 1.0
     discount_factor = 0.1
     reward_decay = 0.9
-    learning_rate = 0.0001
+    learning_rate = 0.001
     epsilon_min = 0.001
-    memory_size = 1000
+    memory_size = 64
     epochs = 1
     batch_size = 64
-    hidden_dim = 256
+    hidden_dim = 512
 
     for total_games in total_games_ar:
         # print("Create baseline models. BLACK {}".format(total_games))
@@ -57,7 +57,8 @@ if __name__ == "__main__":
                                                 # RandomAgent(Player.WHITE),
                                                 # DQNAgent(Player.WHITE, white_model),
                                                 # QTableAgent(Player.WHITE, restored_qtable),
-                                                MinimaxAgent(Player.WHITE, 0),
+                                                # MinimaxAgent(Player.WHITE, 0),
+                                                # MinimaxAgent(Player.WHITE, 1),
                                                 # MinimaxAgent(Player.WHITE, 2),
                                                 # MinimaxAgent(Player.WHITE, 4),
                                                 ],

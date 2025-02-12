@@ -3,12 +3,12 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-from v1.gamestate import GameState
+from v1.gamestate import GameState, BOARD_SHAPE
 from v1.player import Player, opponent
 from v1.position import SkipPosition, Position
 
 
-BOARD_SHAPE = 4
+# BOARD_SHAPE = 8
 
 def game_state_one_hot_encode(game_state, training_player, shape=BOARD_SHAPE):
     """
