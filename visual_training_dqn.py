@@ -32,9 +32,9 @@ async def main():
     # batch_size = 64
     # hidden_dim = 512
 
-    total_games_ar = [100000]
+    total_games_ar = [50000]
     epsilon = 1.0
-    discount_factor = 0.25
+    discount_factor = 0.4
     reward_decay = 0.9
     learning_rate = 0.001
     epsilon_min = 0.1
@@ -61,7 +61,7 @@ async def main():
                                testing_agents=[
                                    RandomAgent(Player.WHITE),
                                    MinimaxAgent(Player.WHITE, 0, "Heuristic"),
-                                   MinimaxAgent(Player.WHITE, 1, "Minimax1"),
+                                   # MinimaxAgent(Player.WHITE, 1, "Minimax1"),
                                    # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
                                    # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
                                ],

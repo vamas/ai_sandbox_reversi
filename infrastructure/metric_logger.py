@@ -1,8 +1,7 @@
 import asyncio
+import socket
 from datetime import datetime, timezone
 from influxdb import InfluxDBClient
-
-from infrastructure.influx_client import InfluxClient
 
 training_stats = {
     "learner": "Default",
@@ -41,7 +40,8 @@ def write_points(buffer):
     data_points = [ {
                         "measurement": e[1]["learner"],
                         "tags": {
-                            "run": e[1]["run_id"]
+                            "run": e[1]["run_id"],
+                            "host": socket.gethostname()
                         },
                         "time": e[0],
                         "fields": {

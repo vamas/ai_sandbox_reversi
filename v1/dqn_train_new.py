@@ -432,23 +432,19 @@ class DQNTrain:
             self.opponent_agents.extend([DQNAgent(Player.WHITE, model, "Self")] * self.self_instances)
 
     def test_model(self, game, freq=1000, total_games=15):
+        def play_random_game(agent, player):
+            game_state = GameState()
+            board = game_state.board
+            testing_agent.player = opponent(player)
+            return play_test_game(DQNAgent(player, self.target_model), agent, board, game_state.current_player)
+
         if game > 0 and game % freq == 0:
             wins = 0
             for testing_agent in self.testing_agents:
                 for i in range(total_games):
-                    game_state = GameState()
-                    board = game_state.board
-                    agent = DQNAgent(Player.BLACK, self.target_model)
-                    testing_agent.player = Player.WHITE
-                    winner = play_test_game(agent, testing_agent, board, game_state.current_player)
-                    wins = wins + (winner == Player.BLACK)
+                    wins = wins + (play_random_game(testing_agent, Player.BLACK) == Player.BLACK)
                 for i in range(total_games):
-                    game_state = GameState()
-                    board = game_state.board
-                    agent = DQNAgent(Player.WHITE, self.target_model)
-                    testing_agent.player = Player.BLACK
-                    winner = play_test_game(agent, testing_agent, board, game_state.current_player)
-                    wins = wins + (winner == Player.WHITE)
+                    wins = wins + (play_random_game(testing_agent, Player.WHITE) == Player.WHITE)
             score = wins / (total_games * 2 * len(self.testing_agents))
             training_stats["score"] = score
 
