@@ -1,0 +1,57 @@
+import asyncio
+from datetime import datetime, timezone
+from influxdb import InfluxDBClient
+
+from infrastructure.influx_client import InfluxClient
+
+training_stats = {
+    "learner": "Default",
+    "run_id": None,
+    "epoch": 0,
+    "loss": 0.0,
+    "accuracy": 0.0,
+    "score": 0.0,
+    "avg_q_value_change": 0.0,
+    "epsilon": 0.0,
+    "learning_rate": 0.0
+}
+
+metrics_buffer_size = 100
+metrics_buffer = []
+
+influx_client = InfluxDBClient(host="192.168.0.181", port=8086, database="AIMLTraining")
+
+async def periodic_task(interval):
+    while True:
+        # Use the stats for any purpose, e.g., logging, sending to a dashboard, etc.
+        # print("Periodic task reading training stats:", training_stats)
+        send_metrics()
+        await asyncio.sleep(interval)
+
+def send_metrics():
+    # Append the current metric first
+    metrics_buffer.append((datetime.now(timezone.utc), training_stats.copy()))
+    # Then check if the buffer is full
+    if len(metrics_buffer) >= metrics_buffer_size:
+        # Flush the buffer asynchronously (using a copy)
+        write_points(metrics_buffer.copy())
+        metrics_buffer.clear()
+
+def write_points(buffer):
+    data_points = [ {
+                        "measurement": e[1]["learner"],
+                        "tags": {
+                            "run": e[1]["run_id"]
+                        },
+                        "time": e[0],
+                        "fields": {
+                            "epoch": e[1]["epoch"],
+                            "loss": e[1]["loss"],
+                            "accuracy": e[1]["accuracy"],
+                            "avg_q_value_change": e[1]["avg_q_value_change"],
+                            "epsilon": e[1]["epsilon"],
+                            "learning_rate": e[1]["learning_rate"],
+                            "score": e[1]["score"]
+                        }
+                }  for e in buffer ]
+    influx_client.write_points(data_points)

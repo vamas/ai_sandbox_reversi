@@ -25,8 +25,8 @@ if __name__ == "__main__":
     white = DQNAgent(Player.WHITE, white_model)
     # black = RandomAgent(Player.BLACK)
     # white = RandomAgent(Player.WHITE)
-    white = MinimaxAgent(Player.WHITE, 6)
-    # black = MinimaxAgent(Player.BLACK, 5)
+    # white = MinimaxAgent(Player.WHITE, 6)
+    # black = MinimaxAgent(Player.BLACK, 6)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE:0}
     for i in tqdm(range(games), desc="Playing games"):
         game_manager = GameManager(black, white)
