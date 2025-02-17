@@ -3,10 +3,14 @@ import socket
 from datetime import datetime, timezone
 from influxdb import InfluxDBClient
 
+chart_colors = ["RED","YELLOW","GREEN","BLUE","PURPLE","CYAN","WHITE"]
+
 training_stats = {
     "learner": "Default",
+    "color": "WHITE",
     "run_id": None,
     "epoch": 0,
+    "episode": 0,
     "loss": 0.0,
     "accuracy": 0.0,
     "score": 0.0,
@@ -41,7 +45,8 @@ def write_points(buffer):
                         "measurement": e[1]["learner"],
                         "tags": {
                             "run": e[1]["run_id"],
-                            "host": socket.gethostname()
+                            "host": socket.gethostname(),
+                            "color": e[1]["color"]
                         },
                         "time": e[0],
                         "fields": {
@@ -51,7 +56,8 @@ def write_points(buffer):
                             "avg_q_value_change": e[1]["avg_q_value_change"],
                             "epsilon": e[1]["epsilon"],
                             "learning_rate": e[1]["learning_rate"],
-                            "score": e[1]["score"]
+                            "score": e[1]["score"],
+                            "episode": e[1]["episode"]
                         }
                 }  for e in buffer ]
     influx_client.write_points(data_points)

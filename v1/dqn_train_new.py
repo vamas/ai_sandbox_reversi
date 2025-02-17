@@ -23,14 +23,15 @@ from v1.moveinfo import MoveInfo
 from v1.player import Player, opponent
 from v1.position import Position, SkipPosition
 from v1.random_agent import RandomAgent
-from infrastructure.metric_logger import training_stats
+from v1.gamemanager import GameManager
+from infrastructure.metric_logger import training_stats, chart_colors
 
 WIN_VALUE = 1.0
 DRAW_VALUE = 0.6
 LOSS_VALUE = 0.0
 ILLEGAL_MOVE_LOSS_VALUE = 0.0
 
-DEFAULT_Q_VALUE = 0.0
+DEFAULT_Q_VALUE = 1.0
 
 def play_test_game(training_agent, testing_agent, board, current_player):
     """
@@ -119,6 +120,7 @@ class DQNTrain:
         self.replay_buffer = ReplayBuffer(self.memory_size)
         self.is_exploration = True
         training_stats["learner"] = "Othello DQN"
+        training_stats["color"] = random.choice(chart_colors)
 
     def initialize_model(self):
         """
@@ -164,10 +166,10 @@ class DQNTrain:
 
             # Play a training game
             self.init_game(game, self.training_agent.player)
-            self.play_single_game()
+            self.play_game()
 
             # Update epsilon
-            self.update_epsilon(game)
+            self.update_epsilon_boltzmann(game)
 
             # Update exploration flag
             self.is_exploration = random.random() < self.epsilon
@@ -200,7 +202,7 @@ class DQNTrain:
         while not game_state.game_over:
             game_state_before, move_info = self.play_turn(game_state)
             game_history = [] # List of (move_info, game_state) tuples
-            assert move_info.player == self.training_agent.player
+            assert move_info.player == self.active_player
             if move_info is not None:
                 game_history.append((move_info, game_state_before))
                 game_episode_state = game_state.clone()
@@ -433,17 +435,17 @@ class DQNTrain:
 
     def test_model(self, game, freq=1000, total_games=15):
         def play_random_game(agent, player):
-            game_state = GameState()
-            board = game_state.board
-            testing_agent.player = opponent(player)
-            return play_test_game(DQNAgent(player, self.target_model), agent, board, game_state.current_player)
+            agent.player = opponent(player)
+            agent_black = DQNAgent(player, self.target_model) if player == Player.BLACK else agent
+            agent_white = DQNAgent(player, self.target_model) if player == Player.WHITE else agent
+            game_mgr = GameManager(agent_black, agent_white)
+            return game_mgr.run()
 
-        if game > 0 and game % freq == 0:
+        if game % freq == 0:
             wins = 0
             for testing_agent in self.testing_agents:
                 for i in range(total_games):
                     wins = wins + (play_random_game(testing_agent, Player.BLACK) == Player.BLACK)
-                for i in range(total_games):
                     wins = wins + (play_random_game(testing_agent, Player.WHITE) == Player.WHITE)
             score = wins / (total_games * 2 * len(self.testing_agents))
             training_stats["score"] = score
