@@ -18,7 +18,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/4x4/"
+models_path = "models/8x8/"
 
 games = 1
 
@@ -40,19 +40,20 @@ async def main():
     # batch_size = 64
     # hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
 
-    total_games_ar = [10000]
+    total_games = 10000
     epsilon = 1.0
     discount_factor = 0.3
-    reward_decay = 0.6
+    reward_decay = 0.8
     learning_rate = 0.001
     epsilon_min = 0.1
     batch_size = 64
-    memory_size = batch_size * 10
-    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
+    memory_size = batch_size * 100
+    # hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 200
 
-    for i in range(3):
+    for i in range(1):
         await train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, learning_rate, memory_size, reward_decay,
-                total_games_ar)
+                total_games)
 
     # sys.exit()
     await asyncio.sleep(10)
@@ -60,10 +61,9 @@ async def main():
 
 
 async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, learning_rate, memory_size, reward_decay,
-                total_games_ar):
-    for total_games in total_games_ar:
-        # Initialize the model for an 8x8 Othello board black
-        training = DQNTrain(total_games=total_games,
+                total_games):
+    # Initialize the model for an 8x8 Othello board black
+    training = DQNTrain(total_games=total_games,
                             epsilon=epsilon,
                             learning_rate=learning_rate,
                             discount_factor=discount_factor,
@@ -78,11 +78,11 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                                 # MinimaxAgent(Player.WHITE, 4),
                             ],
                             testing_agents=[
-                                # RandomAgent(Player.WHITE),
+                                RandomAgent(Player.WHITE),
                                 # MinimaxAgent(Player.WHITE, 0, "Heuristic"),
                                 # MinimaxAgent(Player.WHITE, 1, "Minimax1"),
                                 # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
-                                MinimaxAgent(Player.WHITE, 3, "Minimax3"),
+                                # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
                             ],
                             reward_decay=reward_decay,
                             memory_size=memory_size,
@@ -90,11 +90,11 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                             epsilon_min=epsilon_min,
                             hidden_dim=hidden_dim,
                             self_instances=1)
-        await sleep(log_interval)
-        model = await asyncio.to_thread(training.train_dqn)
-        # Save the model
-        print("Saving model to {}".format("dqn_model_full_{}.pth".format(total_games)))
-        torch.save(model, "{}dqn_model_full_{}.pth".format(models_path, total_games))
+    await sleep(log_interval)
+    model = await asyncio.to_thread(training.train_dqn)
+    # Save the model
+    print("Saving model to {}".format("dqn_model_full_{}.pth".format(total_games)))
+    torch.save(model, "{}dqn_model_full_{}.pth".format(models_path, total_games))
 
 
 # Run the async event loop

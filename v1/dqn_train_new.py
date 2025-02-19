@@ -162,6 +162,16 @@ class DQNTrain:
             model (DQN): The trained DQN model.
         """
 
+        # Fill in memory buffer
+        game = 0
+        while not self.replay_buffer.is_buffer_ready:
+            # Play a training game
+            self.init_game(game, self.training_agent.player)
+            self.play_game()
+            game += 1
+
+        # Train the model
+        self.episode = 0
         for game in tqdm(range(self.total_games), desc="Training DQN"):
 
             # Play a training game
@@ -169,14 +179,14 @@ class DQNTrain:
             self.play_game()
 
             # Update epsilon
-            self.update_epsilon_boltzmann(game)
+            self.update_epsilon(game)
 
             # Update exploration flag
             self.is_exploration = random.random() < self.epsilon
 
             # Replay buffer is ready to sample
-            if self.replay_buffer.is_buffer_ready:
-                self.train_model(self.replay_buffer)
+            # if self.replay_buffer.is_buffer_ready:
+            self.train_model(self.replay_buffer)
 
             # Update target model
             if game % self.target_update_freq == 0:

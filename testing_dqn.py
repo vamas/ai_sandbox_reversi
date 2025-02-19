@@ -13,19 +13,19 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/4x4/"
+models_path = "models/8x8/"
 
-games = 15
+games = 1000
 if __name__ == "__main__":
 
     b_performance = []
-    black_model = torch.load("{}dqn_model_full_100000.pth".format(models_path))
-    white_model = torch.load("{}dqn_model_full_100000.pth".format(models_path))
+    black_model = torch.load("{}dqn_model_full_10000.pth".format(models_path))
+    white_model = torch.load("{}dqn_model_full_10000.pth".format(models_path))
     black = DQNAgent(Player.BLACK, black_model)
     white = DQNAgent(Player.WHITE, white_model)
-    black = RandomAgent(Player.BLACK)
-    # white = RandomAgent(Player.WHITE)
-    white = MinimaxAgent(Player.WHITE, 3)
+    # black = RandomAgent(Player.BLACK)
+    white = RandomAgent(Player.WHITE)
+    # white = MinimaxAgent(Player.WHITE, 3)
     # black = MinimaxAgent(Player.BLACK, 3)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE:0}
     for i in tqdm(range(games), desc="Playing games"):
