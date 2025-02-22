@@ -43,13 +43,13 @@ async def main():
     total_games = 10000
     epsilon = 1.0
     discount_factor = 0.3
-    reward_decay = 0.8
+    reward_decay = 0.9
     learning_rate = 0.001
-    epsilon_min = 0.1
-    batch_size = 64
-    memory_size = batch_size * 100
+    epsilon_min = 0.0
+    batch_size = 64 * 10
+    memory_size = batch_size
     # hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
-    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 200
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 10
 
     for i in range(1):
         await train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, learning_rate, memory_size, reward_decay,

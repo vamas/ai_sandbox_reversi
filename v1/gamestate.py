@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import numpy as np
+
 from v1.player import Player
 from v1.player import opponent
 from v1.position import Position, SkipPosition
@@ -148,38 +150,87 @@ class GameState:
         self.current_player = opponent(self.current_player)
         self.update_legal_moves()
 
+    # def occupied_positions(self):
+    #     occupied = []
+    #     for r in range(self.Rows):
+    #         for c in range(self.Cols):
+    #             if self.board[r][c] != Player.NONE:
+    #                 occupied.append(Position(r, c))
+    #     return occupied
+
     def occupied_positions(self):
-        occupied = []
-        for r in range(self.Rows):
-            for c in range(self.Cols):
-                if self.board[r][c] != Player.NONE:
-                    occupied.append(Position(r, c))
-        return occupied
+        return [Position(r, c) for r in range(self.Rows) for c in range(self.Cols) if self.board[r][c] != Player.NONE]
+
 
     def is_inside_board(self, r, c):
         return 0 <= r < self.Rows and 0 <= c < self.Cols
 
+    # def get_flips(self, pos, player):
+    #     flips = []
+    #     for direction in Position.Directions:
+    #         flips_in_dir = []
+    #         current = Position(pos.row + direction[0], pos.col + direction[1])
+    #         while self.is_inside_board(current.row, current.col) and self.board[current.row][current.col] == opponent(player):
+    #             flips_in_dir.append(current)
+    #             current = Position(current.row + direction[0], current.col + direction[1])
+    #         if self.is_inside_board(current.row, current.col) and self.board[current.row][current.col] == player:
+    #             flips.extend(flips_in_dir)
+    #     return flips
     def get_flips(self, pos, player):
         flips = []
-        for direction in Position.Directions:
+        opponent_player = opponent(player)
+        directions = Position.Directions
+        for direction in directions:
             flips_in_dir = []
-            current = Position(pos.row + direction[0], pos.col + direction[1])
-            while self.is_inside_board(current.row, current.col) and self.board[current.row][current.col] == opponent(player):
-                flips_in_dir.append(current)
-                current = Position(current.row + direction[0], current.col + direction[1])
-            if self.is_inside_board(current.row, current.col) and self.board[current.row][current.col] == player:
+            current_row, current_col = pos.row + direction[0], pos.col + direction[1]
+            while self.is_inside_board(current_row, current_col) and self.board[current_row][
+                current_col] == opponent_player:
+                flips_in_dir.append(Position(current_row, current_col))
+                current_row += direction[0]
+                current_col += direction[1]
+            if self.is_inside_board(current_row, current_col) and self.board[current_row][current_col] == player:
                 flips.extend(flips_in_dir)
         return flips
 
+    # def update_legal_moves(self):
+    #     self.legal_moves.clear()
+    #     for r in range(self.Rows):
+    #         for c in range(self.Cols):
+    #             pos = Position(r, c)
+    #             if self.board[r][c] == Player.NONE:
+    #                 flips = self.get_flips(pos, self.current_player)
+    #                 if flips:
+    #                     self.legal_moves[pos] = flips
+    #     if not self.legal_moves:
+    #         self.legal_moves = {SkipPosition(): []}
+    #     self.legal_moves_list = list(self.legal_moves.keys())
+    #     return self.legal_moves
+
     def update_legal_moves(self):
         self.legal_moves.clear()
+        current_player = self.current_player
+        opponent_player = opponent(current_player)
+        directions = Position.Directions
+
         for r in range(self.Rows):
             for c in range(self.Cols):
-                pos = Position(r, c)
                 if self.board[r][c] == Player.NONE:
-                    flips = self.get_flips(pos, self.current_player)
+                    pos = Position(r, c)
+                    flips = []
+                    for direction in directions:
+                        flips_in_dir = []
+                        current_row, current_col = r + direction[0], c + direction[1]
+                        while self.is_inside_board(current_row, current_col) and self.board[current_row][
+                            current_col] == opponent_player:
+                            flips_in_dir.append(Position(current_row, current_col))
+                            current_row += direction[0]
+                            current_col += direction[1]
+                        if self.is_inside_board(current_row, current_col) and self.board[current_row][
+                            current_col] == current_player:
+                            flips.extend(flips_in_dir)
                     if flips:
                         self.legal_moves[pos] = flips
+
         if not self.legal_moves:
             self.legal_moves = {SkipPosition(): []}
         self.legal_moves_list = list(self.legal_moves.keys())
@@ -187,5 +238,9 @@ class GameState:
 
     def is_move_legal(self, action):
         return action in self.legal_moves_list
+
+    @property
+    def board_flatten(self):
+        return np.array([cell for row in self.board for cell in row])
 
 

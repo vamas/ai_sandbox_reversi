@@ -13,9 +13,9 @@ from tqdm import tqdm
 
 from v1.dqn import DQN
 from v1.dqn_agent import DQNAgent
-from v1.dqn_helpers import (game_state_one_hot_encode,
+from v1.dqn_helpers import (board_one_hot_encode,
                             action_decode, action_encode,
-                            legal_moves_mask)
+                            legal_moves_mask, get_symmetrical_states)
 from v1.dqn_replaybuffer import ReplayBuffer
 from v1.dqn_replaybuffer_prioritized import PrioritizedReplayBuffer
 from v1.gamestate import GameState, BOARD_SHAPE
@@ -92,7 +92,7 @@ class DQNTrain:
         self.epsilon = epsilon
         self.opponent_agents = opponent_agents
         self.reward_decay = reward_decay
-        self.input_dim = BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE
+        self.input_dim = BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE
         self.output_dim = BOARD_SHAPE * BOARD_SHAPE + 1
         self.hidden_dim = hidden_dim
         self.memory_size = memory_size
@@ -256,17 +256,19 @@ class DQNTrain:
         """
         reward = final_reward
         done = 1
-        next_state = None
+        next_state_board = None
         for move, game_state in reversed(game_history):
-            self.replay_buffer.push(game_state_one_hot_encode(game_state, self.training_agent.player),
-                                    action_encode(move.position),
-                                    reward,
-                                    game_state_one_hot_encode(next_state, self.training_agent.player),
-                                    done,
-                                    legal_moves_mask(game_state.legal_moves_list))
+            for symmetrical_board in get_symmetrical_states(game_state.board):
+                for next_state_symmetrical_board in get_symmetrical_states(next_state_board):
+                    self.replay_buffer.push(board_one_hot_encode(symmetrical_board, self.training_agent.player),
+                                            action_encode(move.position),
+                                            reward,
+                                            board_one_hot_encode(next_state_symmetrical_board, self.training_agent.player),
+                                            done,
+                                            legal_moves_mask(game_state.legal_moves_list))
             reward = reward * self.reward_decay
             done = 0
-            next_state = game_state
+            next_state_board = game_state.board
 
     def play_turn(self, game_state):
         """
@@ -327,7 +329,7 @@ class DQNTrain:
                     return SkipPosition()
                 if isinstance(legal_moves[0], SkipPosition):
                     return SkipPosition()
-                q_values = self.model(torch.tensor(game_state_one_hot_encode(game_state, game_state.current_player),
+                q_values = self.model(torch.tensor(board_one_hot_encode(game_state.board, game_state.current_player),
                                                    dtype=torch.float32).unsqueeze(0))
                 q_values[torch.tensor(legal_moves_mask(game_state.legal_moves_list), dtype=torch.float32).unsqueeze(0) == 0] = -float("inf")
                 best_move = action_decode(q_values[0].argmax(axis=0).item())
@@ -340,6 +342,7 @@ class DQNTrain:
         Args:
             replay_buffer:
         """
+
         # Sample minibatch
         # Simple replay buffer
         states, actions, rewards, next_states, dones, valid_moves = replay_buffer.sample(self.batch_size)
@@ -443,7 +446,7 @@ class DQNTrain:
         if model is not None:
             self.opponent_agents.extend([DQNAgent(Player.WHITE, model, "Self")] * self.self_instances)
 
-    def test_model(self, game, freq=1000, total_games=15):
+    def test_model(self, game, freq=1000, total_games=100):
         def play_random_game(agent, player):
             agent.player = opponent(player)
             agent_black = DQNAgent(player, self.target_model) if player == Player.BLACK else agent

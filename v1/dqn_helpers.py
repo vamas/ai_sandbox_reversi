@@ -10,7 +10,7 @@ from v1.position import SkipPosition, Position
 
 # BOARD_SHAPE = 8
 
-def game_state_one_hot_encode(game_state, training_player, shape=BOARD_SHAPE):
+def board_one_hot_encode(board, training_player, shape=BOARD_SHAPE):
     """
         Encode a game state to a one-hot encoded vector.
     :param game_state: input game state
@@ -20,21 +20,45 @@ def game_state_one_hot_encode(game_state, training_player, shape=BOARD_SHAPE):
         [Opponent pieces BOARD_SHAPExBOARD_SHAPE] +
         [Legal moves BOARD_SHAPExBOARD_SHAPE]
     """
-    if game_state is None:
-        return np.zeros(shape * shape + shape * shape + shape * shape, dtype=float)
-    state = np.zeros(game_state.Rows * game_state.Cols + game_state.Rows * game_state.Cols, dtype=float)
-    for row in range(game_state.Rows):
-        for col in range(game_state.Cols):
-            if game_state.board[row][col] != Player.NONE:
-                idx = row * game_state.Cols + col
-                if game_state.board[row][col] == training_player:
+    state = np.zeros(shape * shape + shape * shape, dtype=float)
+    if board is None:
+        return state
+    # for i in range(len(board)):
+    #     if board[i] == training_player:
+    #         state[i] = 1
+    #     elif board[i] == opponent(training_player):
+    #         state[i + shape * shape] = 1
+
+    for row in range(shape):
+        for col in range(shape):
+            if board[row][col] != Player.NONE:
+                idx = row * shape + col
+                if board[row][col] == training_player:
                     state[idx] = 1
-                elif game_state.board[row][col] == opponent(training_player):
+                elif board[row][col] == opponent(training_player):
                     state[idx + shape * shape] = 1
-    final_state = np.append(state, legal_moves_one_hot_encode(game_state.legal_moves.keys(), shape))
+    # final_state = np.append(state, legal_moves_one_hot_encode(game_state.legal_moves.keys(), shape))
     # final_state = np.append(final_state, [game_state.current_player == training_player])
-    # final_state = state
+    final_state = state
     return final_state.flatten()
+
+def get_symmetrical_states(board, shape=BOARD_SHAPE):
+    return [board]
+
+    # """Returns a list of 8 symmetric versions of the given board."""
+    # symmetries = []
+    # if board is None:
+    #     return symmetries
+    # board = np.array(board)
+    # symmetries.append(board)  # Identity
+    # symmetries.append(np.rot90(board, 1))  # 90° Rotation
+    # symmetries.append(np.rot90(board, 2))  # 180° Rotation
+    # symmetries.append(np.rot90(board, 3))  # 270° Rotation
+    # symmetries.append(np.flip(board, axis=1))  # Horizontal Flip
+    # symmetries.append(np.flip(board, axis=0))  # Vertical Flip
+    # symmetries.append(np.transpose(board))  # Diagonal Flip (Top-Left to Bottom-Right)
+    # symmetries.append(np.flip(np.transpose(board), axis=1))  # Anti-Diagonal Flip (Top-Right to Bottom-Left)
+    # return np.array(symmetries)
 
 def legal_moves_one_hot_encode(legal_moves, shape=BOARD_SHAPE):
     state = np.zeros(shape * shape, dtype=float)

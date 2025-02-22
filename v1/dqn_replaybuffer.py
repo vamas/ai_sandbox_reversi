@@ -5,7 +5,7 @@ import numpy as np
 # Replay Buffer
 class ReplayBuffer:
     def __init__(self, size):
-        self.buffer = deque(maxlen=int(size*1.1))
+        self.buffer = deque(maxlen=int(size))
         self.maxlen = size
         self._is_buffer_ready = False
 
@@ -21,6 +21,14 @@ class ReplayBuffer:
         states, actions, rewards, next_states, dones, legal_moves = zip(*batch)
         return (np.array(states), np.array(actions), np.array(rewards),
                 np.array(next_states), np.array(dones), np.array(legal_moves))
+
+    def sample_all_batches(self, batch_size):
+        for i in range(0, len(self.buffer), batch_size):
+            batch = list(self.buffer)[i:i+batch_size]
+            states, actions, rewards, next_states, dones, legal_moves = zip(*batch)
+            yield (np.array(states), np.array(actions), np.array(rewards),
+                   np.array(next_states), np.array(dones), np.array(legal_moves))
+
 
     def size(self):
         return len(self.buffer)
