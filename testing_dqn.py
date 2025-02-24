@@ -4,6 +4,7 @@ import torch
 from tqdm import tqdm
 
 from v1.dqn_agent import DQNAgent
+from v1.gamestate import BOARD_SHAPE
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
 from v1.gamemanager import GameManager
@@ -13,7 +14,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/4x4/"
+models_path = "models/{}x{}/".format(BOARD_SHAPE,BOARD_SHAPE)
 
 games = 1000
 if __name__ == "__main__":
@@ -24,8 +25,8 @@ if __name__ == "__main__":
     white_model = torch.load("{}dqn_model_full_10000.pth".format(models_path))
     black = DQNAgent(Player.BLACK, black_model)
     white = DQNAgent(Player.WHITE, white_model)
-    black = RandomAgent(Player.BLACK)
-    # white = RandomAgent(Player.WHITE)
+    # black = RandomAgent(Player.BLACK)
+    white = RandomAgent(Player.WHITE)
     # white = MinimaxAgent(Player.WHITE, 3)
     # black = MinimaxAgent(Player.BLACK, 3)
     wins = {Player.BLACK: 0, Player.WHITE: 0, Player.NONE:0}

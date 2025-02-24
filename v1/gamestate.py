@@ -7,18 +7,23 @@ from v1.player import opponent
 from v1.position import Position, SkipPosition
 from v1.moveinfo import MoveInfo
 
-BOARD_SHAPE = 8
+BOARD_SHAPE = 6
 
 if BOARD_SHAPE == 8:
-    Mid1 = (3, 3)
-    Mid2 = (4, 4)
-    Mid3 = (3, 4)
-    Mid4 = (4, 3)
+    Mid1 = (3, 4) # B
+    Mid2 = (4, 3) # B
+    Mid3 = (3, 3) # W
+    Mid4 = (4, 4) # W
 elif BOARD_SHAPE == 4:
-    Mid1 = (2, 1)
-    Mid2 = (1, 2)
-    Mid3 = (2, 2)
-    Mid4 = (1, 1)
+    Mid1 = (2, 1) # B
+    Mid2 = (1, 2) # B
+    Mid3 = (2, 2) # W
+    Mid4 = (1, 1) # W
+elif BOARD_SHAPE == 6:
+    Mid1 = (2, 3) # B
+    Mid2 = (3, 2) # B
+    Mid3 = (2, 2) # W
+    Mid4 = (3, 3) # W
 
 def print_board(game_state):
     for row in game_state.board:

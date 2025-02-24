@@ -315,23 +315,24 @@ class DQNTrain:
         Return:
             Position: The chosen action
         """
-        legal_moves = list(game_state.legal_moves_list)
-        is_exploration = self.is_exploration & (not override_exploration)
-        if is_exploration:
+        legal_moves = game_state.legal_moves_list
+        # is_exploration = self.is_exploration & (not override_exploration)
+        if self.is_exploration:
             # Exploration with preference to unexplored moves
-            if legal_moves is None:
-                return SkipPosition()
+            # if legal_moves is None:
+            #     return SkipPosition()
             return random.choice(legal_moves)
         else:
+            if isinstance(legal_moves[0], SkipPosition):
+                return SkipPosition()
             # Exploitation
             with torch.no_grad():
-                if legal_moves is None:
-                    return SkipPosition()
-                if isinstance(legal_moves[0], SkipPosition):
-                    return SkipPosition()
+                # if legal_moves is None:
+                #     return SkipPosition()
                 q_values = self.model(torch.tensor(board_one_hot_encode(game_state.board, game_state.current_player),
                                                    dtype=torch.float32).unsqueeze(0))
-                q_values[torch.tensor(legal_moves_mask(game_state.legal_moves_list), dtype=torch.float32).unsqueeze(0) == 0] = -float("inf")
+                q_values[torch.tensor(legal_moves_mask(game_state.legal_moves_list),
+                                      dtype=torch.float32).unsqueeze(0) == 0] = LOSS_VALUE #-float("inf")
                 best_move = action_decode(q_values[0].argmax(axis=0).item())
                 return best_move
 
@@ -365,12 +366,12 @@ class DQNTrain:
 
         # # Next state q value Single Q learning
         # next_q_values = self.target_model(next_states)
-        # next_q_values[valid_moves == 0] = -float("inf")  # Mask invalid actions
+        # next_q_values[valid_moves == 0] = LOSS_VALUE # -float("inf")  # Mask invalid actions
         # next_q_values = next_q_values.max(1)[0]
 
         # Next state q value Double Q learning
         next_q_values_online = self.model(next_states)
-        next_q_values_online[valid_moves == 0] = -float("inf")  # Mask invalid actions
+        next_q_values_online[valid_moves == 0] = LOSS_VALUE # -float("inf")  # Mask invalid actions
         next_q_values = self.target_model(next_states).gather(1, next_q_values_online.argmax(1).unsqueeze(1)).squeeze(1)
 
         # Compute targets using Bellmans equation

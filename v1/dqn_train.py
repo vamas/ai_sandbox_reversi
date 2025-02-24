@@ -10,7 +10,7 @@ import torch.optim as optim
 
 from v1.dqn import DQN
 from v1.dqn_replaybuffer import ReplayBuffer
-from v1.gamestate import GameState, print_board
+from v1.gamestate import GameState, print_board, BOARD_SHAPE
 from v1.player import Player, opponent
 from v1.position import Position, SkipPosition
 from v1.random_agent import RandomAgent
@@ -21,7 +21,6 @@ LOSS_VALUE = -1.0
 
 DEFAULT_Q_VALUE = 1.0
 
-BOARD_SHAPE = 4
 
 def game_state_encode(game_state, shape=BOARD_SHAPE):
     if game_state is None:

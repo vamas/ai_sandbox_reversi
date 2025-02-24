@@ -18,44 +18,39 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 DEFAULT_Q_VALUE = 0.0
 
-models_path = "models/8x8/"
-
 games = 1
 
 log_interval = 0.1
 
-print(socket.gethostname())
+print("Host name: {}". format(socket.gethostname()))
+print("Board shape: {}".format(BOARD_SHAPE))
+
+models_path = "models/{}x{}/".format(BOARD_SHAPE,BOARD_SHAPE)
+total_games = 50000
+epsilon = 1.0
+discount_factor = 0.3
+reward_decay = 0.9
+learning_rate = 0.0001
+epsilon_min = 0.0
+batch_size = 64
+memory_size = 0
+hidden_dim = 0
+
+if BOARD_SHAPE == 8:
+    memory_size = batch_size * 10
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 128
+elif BOARD_SHAPE == 4:
+    memory_size = batch_size * 1
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 16
+elif BOARD_SHAPE == 6:
+    memory_size = batch_size * 10
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 64
 
 async def main():
     metric_logger = asyncio.create_task(periodic_task(log_interval))
-
-    # Best config so far - 92%
-    # epsilon = 1.0
-    # discount_factor = 0.15
-    # reward_decay = 0.9
-    # learning_rate = 0.001
-    # epsilon_min = 0.001
-    # memory_size = batch_size * 10
-    # epochs = 1
-    # batch_size = 64
-    # hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
-
-    total_games = 10000
-    epsilon = 1.0
-    discount_factor = 0.3
-    reward_decay = 0.9
-    learning_rate = 0.001
-    epsilon_min = 0.0
-    batch_size = 64 * 10
-    memory_size = batch_size
-    # hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
-    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 10
-
     for i in range(1):
         await train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, learning_rate, memory_size, reward_decay,
                 total_games)
-
-    # sys.exit()
     await asyncio.sleep(10)
     metric_logger.cancel()
 
