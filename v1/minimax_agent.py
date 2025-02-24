@@ -21,9 +21,20 @@ heuristic_weights_4 = [
     [100,-25,-25,100]
 ]
 
+heuristic_weights_6 = [
+    [100, -20, 10, 10, -20, 100],
+    [-20, -20, 2, 2, -20, -20],
+    [10, 2, 5, 5, 2, 10],
+    [10, 2, 5, 5, 2, 10],
+    [-20, -20, 2, 2, -20, -20],
+    [100, -20, 10, 10, -20, 100]
+]
+
+
 def heuristic_fn(game_state):
     board_shape = game_state.grid_shape
     heuristic_weights = heuristic_weights_8 if board_shape == 8 else heuristic_weights_4
+    heuristic_weights = heuristic_weights_6 if board_shape == 6 else heuristic_weights
     player_count = 0
     opponent_count = 0
     for row in range(board_shape):

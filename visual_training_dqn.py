@@ -16,10 +16,17 @@ from v1.gamestate import BOARD_SHAPE
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
+def get_device(force_cpu=False):
+    if force_cpu:
+        return torch.device("cpu")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+
 DEFAULT_Q_VALUE = 0.0
-
-games = 1
-
 log_interval = 0.1
 
 print("Host name: {}". format(socket.gethostname()))
@@ -47,6 +54,10 @@ elif BOARD_SHAPE == 6:
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 64
 
 async def main():
+    torch.backends.mps.allow_tf32 = True  # Enable mixed precision
+    print(torch.backends.mps.is_available())  # Should print: True
+    print(torch.backends.mps.is_built())  # Should print: True
+
     metric_logger = asyncio.create_task(periodic_task(log_interval))
     for i in range(1):
         await train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, learning_rate, memory_size, reward_decay,
@@ -59,6 +70,7 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                 total_games):
     # Initialize the model for an 8x8 Othello board black
     training = DQNTrain(total_games=total_games,
+                            torch_device=get_device(True),
                             epsilon=epsilon,
                             learning_rate=learning_rate,
                             discount_factor=discount_factor,

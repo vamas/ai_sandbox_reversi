@@ -65,6 +65,7 @@ def play_test_game(training_agent, testing_agent, board, current_player):
 class DQNTrain:
 
     def __init__(self,
+                 torch_device=None,
                  hidden_dim=256,
                  total_games=100,
                  learning_rate=0.4,
@@ -101,6 +102,7 @@ class DQNTrain:
         self.optimizer = None
         self.loss_fn = None
         self.target_model = None
+        self.torch_device = torch_device if torch_device is not None else torch.device("cpu")
         self.target_update_freq = 1000 # Update target q-network every other 1000 steps (played games)
         self.epsilon_min = epsilon_min
         self.epsilon_decay = np.exp(np.log(epsilon_min / epsilon) / total_games)
@@ -151,6 +153,8 @@ class DQNTrain:
 
         self.target_model = DQN(input_dim, output_dim, self.hidden_dim)
         self.target_model.load_state_dict(self.model.state_dict())  # Initialize with same weights
+        self.model.to(self.torch_device)
+        self.target_model.to(self.torch_device)
 
         self.loss_fn = nn.SmoothL1Loss()
 
@@ -354,12 +358,12 @@ class DQNTrain:
         # states, actions, rewards, next_states, dones, valid_moves = zip(*batch)
 
         # Convert to tensors
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.long)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
-        valid_moves = torch.tensor(valid_moves, dtype=torch.float32)
+        states = torch.tensor(states, dtype=torch.float32).to(self.torch_device)
+        actions = torch.tensor(actions, dtype=torch.long).to(self.torch_device)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.torch_device)
+        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.torch_device)
+        dones = torch.tensor(dones, dtype=torch.float32).to(self.torch_device)
+        valid_moves = torch.tensor(valid_moves, dtype=torch.float32).to(self.torch_device)
 
         # Compute Q-values
         q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
@@ -445,13 +449,16 @@ class DQNTrain:
 
     def add_trained_model_to_opponents(self, model):
         if model is not None:
-            self.opponent_agents.extend([DQNAgent(Player.WHITE, model, "Self")] * self.self_instances)
+            self.opponent_agents.extend([DQNAgent(Player.WHITE, model, torch_device=self.torch_device, name="Self")]
+                                        * self.self_instances)
 
     def test_model(self, game, freq=1000, total_games=100):
         def play_random_game(agent, player):
             agent.player = opponent(player)
-            agent_black = DQNAgent(player, self.target_model) if player == Player.BLACK else agent
-            agent_white = DQNAgent(player, self.target_model) if player == Player.WHITE else agent
+            agent_black = DQNAgent(player, self.target_model, torch_device=self.torch_device) \
+                if player == Player.BLACK else agent
+            agent_white = DQNAgent(player, self.target_model, torch_device=self.torch_device) \
+                if player == Player.WHITE else agent
             game_mgr = GameManager(agent_black, agent_white)
             return game_mgr.run()
 
