@@ -334,9 +334,9 @@ class DQNTrain:
                 # if legal_moves is None:
                 #     return SkipPosition()
                 q_values = self.model(torch.tensor(board_one_hot_encode(game_state.board, game_state.current_player),
-                                                   dtype=torch.float32).unsqueeze(0))
+                                                   dtype=torch.float32).to(self.torch_device).unsqueeze(0))
                 q_values[torch.tensor(legal_moves_mask(game_state.legal_moves_list),
-                                      dtype=torch.float32).unsqueeze(0) == 0] = LOSS_VALUE #-float("inf")
+                                      dtype=torch.float32).to(self.torch_device).unsqueeze(0) == 0] = LOSS_VALUE #-float("inf")
                 best_move = action_decode(q_values[0].argmax(axis=0).item())
                 return best_move
 

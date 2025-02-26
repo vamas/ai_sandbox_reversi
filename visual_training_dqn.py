@@ -33,7 +33,7 @@ print("Host name: {}". format(socket.gethostname()))
 print("Board shape: {}".format(BOARD_SHAPE))
 
 models_path = "models/{}x{}/".format(BOARD_SHAPE,BOARD_SHAPE)
-total_games = 50000
+total_games = 100000
 epsilon = 1.0
 discount_factor = 0.3
 reward_decay = 0.9
@@ -70,7 +70,7 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                 total_games):
     # Initialize the model for an 8x8 Othello board black
     training = DQNTrain(total_games=total_games,
-                            torch_device=get_device(True),
+                            torch_device=get_device(False),
                             epsilon=epsilon,
                             learning_rate=learning_rate,
                             discount_factor=discount_factor,

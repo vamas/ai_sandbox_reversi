@@ -1,7 +1,9 @@
+import time
+
 import pygame
 
 from v1.agent import AgentType
-from v1.gamestate import GameState
+from v1.gamestate import GameState, BOARD_SHAPE
 from v1.player import Player
 from v1.position import Position
 
@@ -35,13 +37,13 @@ class GameManager:
     @property
     def cell_size(self):
         """Getter method for color property."""
-        return WINDOW_SIZE // self.game_state.grid_shape()
+        return WINDOW_SIZE // BOARD_SHAPE
 
     def draw_board(self):
         screen.fill(GREEN)  # Fill the background with green
         # Draw grid lines
-        for row in range(self.game_state.grid_shape()):
-            for col in range(self.game_state.grid_shape()):
+        for row in range(BOARD_SHAPE):
+            for col in range(BOARD_SHAPE):
                 rect = pygame.Rect(col * self.cell_size, row * self.cell_size, self.cell_size, self.cell_size)
                 pygame.draw.rect(screen, GRAY, rect, 1)  # Draw the cell borders
                 # Highlight legal moves
@@ -50,8 +52,8 @@ class GameManager:
 
     def draw_pieces(self):
         board = self.game_state.board
-        for row in range(self.game_state.grid_shape()):
-            for col in range(self.game_state.grid_shape()):
+        for row in range(BOARD_SHAPE):
+            for col in range(BOARD_SHAPE):
                 if self.game_state.board[row][col] == Player.BLACK:
                     pygame.draw.circle(screen, BLACK,
                                        (col * self.cell_size + self.cell_size // 2,
@@ -116,6 +118,8 @@ class GameManager:
             if self.agents[self.game_state.current_player].agent_type == AgentType.COMPUTER:
                 move = self.agents[self.game_state.current_player].get_best_move(self.game_state)
                 move_info = self.game_state.make_move(move)
+                time.sleep(1)
+
 
             # Draw the board and pieces
             self.draw_board()
