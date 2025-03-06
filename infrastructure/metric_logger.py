@@ -16,7 +16,8 @@ training_stats = {
     "score": 0.0,
     "avg_q_value_change": 0.0,
     "epsilon": 0.0,
-    "learning_rate": 0.0
+    "learning_rate": 0.0,
+    "training_time": 0.0
 }
 
 metrics_buffer_size = 100
@@ -57,7 +58,8 @@ def write_points(buffer):
                             "epsilon": e[1]["epsilon"],
                             "learning_rate": e[1]["learning_rate"],
                             "score": e[1]["score"],
-                            "episode": e[1]["episode"]
+                            "episode": e[1]["episode"],
+                            "training_time": e[1]["training_time"]
                         }
                 }  for e in buffer ]
     influx_client.write_points(data_points)

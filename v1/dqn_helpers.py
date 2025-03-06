@@ -43,22 +43,22 @@ def board_one_hot_encode(board, training_player, shape=BOARD_SHAPE):
     return final_state.flatten()
 
 def get_symmetrical_states(board, shape=BOARD_SHAPE):
-    return [board]
+    # return [board]
 
-    # """Returns a list of 8 symmetric versions of the given board."""
-    # symmetries = []
-    # if board is None:
-    #     return symmetries
-    # board = np.array(board)
-    # symmetries.append(board)  # Identity
-    # symmetries.append(np.rot90(board, 1))  # 90° Rotation
-    # symmetries.append(np.rot90(board, 2))  # 180° Rotation
-    # symmetries.append(np.rot90(board, 3))  # 270° Rotation
+    """Returns a list of 8 symmetric versions of the given board."""
+    symmetries = []
+    if board is None:
+        return symmetries
+    board = np.array(board)
+    symmetries.append(board)  # Identity
+    symmetries.append(np.rot90(board, 1))  # 90° Rotation
+    symmetries.append(np.rot90(board, 2))  # 180° Rotation
+    symmetries.append(np.rot90(board, 3))  # 270° Rotation
     # symmetries.append(np.flip(board, axis=1))  # Horizontal Flip
     # symmetries.append(np.flip(board, axis=0))  # Vertical Flip
     # symmetries.append(np.transpose(board))  # Diagonal Flip (Top-Left to Bottom-Right)
     # symmetries.append(np.flip(np.transpose(board), axis=1))  # Anti-Diagonal Flip (Top-Right to Bottom-Left)
-    # return np.array(symmetries)
+    return np.array(symmetries)
 
 def legal_moves_one_hot_encode(legal_moves, shape=BOARD_SHAPE):
     state = np.zeros(shape * shape, dtype=float)

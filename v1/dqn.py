@@ -23,7 +23,9 @@ class DQN(nn.Module):
         self.dropout1 = nn.Dropout(p=dropout_rate)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.dropout2 = nn.Dropout(p=dropout_rate)
-        self.fc3 = nn.Linear(hidden_dim, output_dim)
+        self.fc3 = nn.Linear(hidden_dim, hidden_dim)
+        self.dropout3 = nn.Dropout(p=dropout_rate)
+        self.fc4 = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
         """
@@ -39,5 +41,7 @@ class DQN(nn.Module):
         x = self.dropout1(x)
         x = F.relu(self.fc2(x))
         x = self.dropout2(x)
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
+        x = self.dropout3(x)
+        x = self.fc4(x)
         return x

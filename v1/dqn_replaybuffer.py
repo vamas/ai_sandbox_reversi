@@ -5,7 +5,7 @@ import numpy as np
 # Replay Buffer
 class ReplayBuffer:
     def __init__(self, size):
-        self.buffer = deque(maxlen=int(size))
+        self.buffer = deque(maxlen=int(size) + 8)
         self.maxlen = size
         self._is_buffer_ready = False
 

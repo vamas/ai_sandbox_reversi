@@ -1,5 +1,6 @@
 # Train qtable agent against random agent
 import copy
+import time
 from collections import defaultdict
 import random
 import uuid
@@ -53,6 +54,15 @@ def play_test_game(training_agent, testing_agent, board, current_player):
     while not game_state.game_over:
         play_test_game_turn()
     return game_state.winner
+
+def set_seed(seed=49):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.backends.mps.is_available():
+        torch.mps.manual_seed(seed)  # For MPS on Mac
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)  # For CUDA
 
 # - Play game
 # - Make first training move
@@ -142,14 +152,18 @@ class DQNTrain:
         input_dim = self.input_dim  # Flattened board as input
         output_dim = self.output_dim  # Total number of possible actions
 
+        set_seed()
+
         self.model = DQN(input_dim, output_dim, self.hidden_dim)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/10), gamma=0.85)
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/100), gamma=0.75)
 
-        for layer in self.model.children():
-            if isinstance(layer, nn.Linear):
-                nn.init.xavier_uniform_(layer.weight)
-                nn.init.zeros_(layer.bias)
+
+
+        # for layer in self.model.children():
+        #    if isinstance(layer, nn.Linear):
+        #        nn.init.xavier_uniform_(layer.weight)
+        #        nn.init.zeros_(layer.bias)
 
         self.target_model = DQN(input_dim, output_dim, self.hidden_dim)
         self.target_model.load_state_dict(self.model.state_dict())  # Initialize with same weights
@@ -166,14 +180,6 @@ class DQNTrain:
             model (DQN): The trained DQN model.
         """
 
-        # Fill in memory buffer
-        game = 0
-        while not self.replay_buffer.is_buffer_ready:
-            # Play a training game
-            self.init_game(game, self.training_agent.player)
-            self.play_game()
-            game += 1
-
         # Train the model
         self.episode = 0
         for game in tqdm(range(self.total_games), desc="Training DQN"):
@@ -183,14 +189,14 @@ class DQNTrain:
             self.play_game()
 
             # Update epsilon
-            self.update_epsilon(game)
+            self.update_epsilon_boltzmann(game)
 
             # Update exploration flag
             self.is_exploration = random.random() < self.epsilon
 
             # Replay buffer is ready to sample
             # if self.replay_buffer.is_buffer_ready:
-            self.train_model(self.replay_buffer)
+            #     self.train_model(self.replay_buffer)
 
             # Update target model
             if game % self.target_update_freq == 0:
@@ -274,6 +280,11 @@ class DQNTrain:
             done = 0
             next_state_board = game_state.board
 
+            # train if replay buffer is full
+            if self.replay_buffer.is_buffer_ready:
+                self.train_model(self.replay_buffer)
+                self.replay_buffer.purge()
+
     def play_turn(self, game_state):
         """
             Play a turn e.g. BLACK then WHITE player.
@@ -348,6 +359,8 @@ class DQNTrain:
             replay_buffer:
         """
 
+        start_time = time.time()
+
         # Sample minibatch
         # Simple replay buffer
         states, actions, rewards, next_states, dones, valid_moves = replay_buffer.sample(self.batch_size)
@@ -404,6 +417,8 @@ class DQNTrain:
         self.scheduler.step()
         training_stats["learning_rate"] = self.optimizer.param_groups[0]['lr']
 
+        episode_time = time.time() - start_time
+        training_stats["training_time"] = episode_time
         # self.replay_buffer.purge()
 
     def game_result_reward(self, winner, illegal_move=False):
