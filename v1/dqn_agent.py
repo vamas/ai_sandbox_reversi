@@ -15,13 +15,16 @@ class DQNAgent(Agent):
         self.torch_device = torch_device
 
     def get_best_move(self, game_state):
-        legal_moves = list(game_state.legal_moves.keys())
-        if legal_moves is None:
-            # print("No legal moves available")
-            return SkipPosition()
-        if isinstance(legal_moves[0], SkipPosition):
-            # print("No legal moves available")
-            return SkipPosition()
+        # legal_moves = list(game_state.legal_moves.keys())
+        # if legal_moves is None:
+        #     # print("No legal moves available")
+        #     return SkipPosition()
+        # if isinstance(legal_moves[0], SkipPosition):
+        #     # print("No legal moves available")
+        #     return SkipPosition()
+
+        if len(game_state.legal_moves_list) == 1:
+            return game_state.legal_moves_list[0]
 
         q_values = self.model(torch.tensor(board_one_hot_encode(game_state.board, game_state.current_player),
                                            dtype=torch.float32).to(self.torch_device).unsqueeze(0))
