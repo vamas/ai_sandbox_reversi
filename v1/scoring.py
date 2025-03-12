@@ -1,4 +1,4 @@
-DEFAULT_SCORE = 1500
+DEFAULT_SCORE = 1500.0
 
 class ELOSystem:
     def __init__(self, k_factor=32):

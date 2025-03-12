@@ -25,12 +25,15 @@ metrics_buffer = []
 
 influx_client = InfluxDBClient(host="192.168.0.181", port=8086, database="AIMLTraining")
 
-async def periodic_task(interval):
+async def periodic_logger_task(interval):
     while True:
         # Use the stats for any purpose, e.g., logging, sending to a dashboard, etc.
         # print("Periodic task reading training stats:", training_stats)
-        send_metrics()
-        await asyncio.sleep(interval)
+        try:
+            send_metrics()
+            await asyncio.sleep(interval)
+        except Exception as e:
+            raise e
 
 def send_metrics():
     # Append the current metric first
@@ -63,3 +66,4 @@ def write_points(buffer):
                         }
                 }  for e in buffer ]
     influx_client.write_points(data_points)
+    influx_client.close()
