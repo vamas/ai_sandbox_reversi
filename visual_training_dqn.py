@@ -34,10 +34,10 @@ print("Host name: {}". format(socket.gethostname()))
 print("Board shape: {}".format(BOARD_SHAPE))
 
 models_path = "models/{}x{}/".format(BOARD_SHAPE,BOARD_SHAPE)
-total_games = 20000
+total_games = 60000
 epsilon = 1.0
 discount_factor = 0.3
-reward_decay = 0.90
+reward_decay = 0.9
 learning_rate = 0.0001
 epsilon_min = 0.1
 batch_size = 64
@@ -45,13 +45,13 @@ memory_size = 0
 hidden_dim = 0
 
 if BOARD_SHAPE == 8:
-    memory_size = batch_size * 10
+    memory_size = batch_size * 1000
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 128
 elif BOARD_SHAPE == 4:
-    memory_size = batch_size * 1
+    memory_size = batch_size * 100
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 32
 elif BOARD_SHAPE == 6:
-    memory_size = batch_size * 10
+    memory_size = batch_size * 100
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 64
 
 def handle_task_result(task):
@@ -80,7 +80,12 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                 total_games):
     # Initialize the model for an 8x8 Othello board black
     pre_trained_model_path = ""
-    for i in range(10):
+    scoring_model_path = ""
+    # pre_trained_model_path = "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, 0)
+    # pre_trained_model_path = "{}dqn_model_full_20000_{}.pth".format(models_path, 0)
+    # scoring_model = MinimaxAgent(Player.WHITE, 2)
+    # scoring_model_path = "{}dqn_model_full_20000_{}.pth".format(models_path, 0)
+    for i in range(0, 1):
         training = DQNTrain(total_games=total_games,
                                 torch_device=get_device(True),
                                 epsilon=epsilon,
@@ -92,13 +97,15 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                                 epsilon_min=epsilon_min,
                                 hidden_dim=hidden_dim,
                                 self_instances=1,
-                                pre_trained_model_path="")
+                                pre_trained_model_path=pre_trained_model_path,
+                                scoring_model=scoring_model_path)
         await sleep(log_interval)
         model = await asyncio.to_thread(training.train_dqn)
         # Save the model
         print("Saving model to {}".format("dqn_model_full_{}_{}.pth".format(total_games, i)))
         torch.save(model.state_dict(), "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, i))
         pre_trained_model_path = "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, i)
+        scoring_model_path = "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, i)
 
 
 # Run the async event loop

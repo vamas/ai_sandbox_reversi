@@ -31,7 +31,7 @@ from infrastructure.metric_logger import training_stats, chart_colors
 from v1.scoring import ELOSystem, DEFAULT_SCORE
 
 WIN_VALUE = 1.0
-DRAW_VALUE = 0.6
+DRAW_VALUE = 0.5
 LOSS_VALUE = 0.0
 ILLEGAL_MOVE_LOSS_VALUE = 0.0
 
@@ -69,7 +69,9 @@ class DQNTrain:
                  batch_size=64,
                  epsilon_min=0.1,
                  self_instances=1,
-                 pre_trained_model_path=None):
+                 pre_trained_model_path=None,
+                 scoring_model=RandomAgent(Player.WHITE),
+                 target_score=1800):
         """
         Initialize the Deep Q-Network.
 
@@ -115,22 +117,29 @@ class DQNTrain:
         self.scorer = ELOSystem()
         self.target_model_update_freq = 1000  # Update target q-network every other 1000 steps (played games)
 
-        # self.opponent_update_freq = 10000
-        self.opponent_agents = deque(maxlen=1)
+        self.elo_current = 1500
+        self.elo_previous = 1500
+
+        self.opponent_update_freq = 1000
+        self.opponent_agents = deque(maxlen=5)
         opponent_agent = RandomAgent(Player.WHITE)
         if pre_trained_model_path != "":
-            opponent_model = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
-            opponent_model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
+            # opponent_model = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
+            # opponent_model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
+            opponent_model = DQN(self.input_dim, self.output_dim, self.hidden_dim, initial_weights=pre_trained_model_path)
             opponent_agent = DQNAgent(Player.WHITE, opponent_model, torch_device=self.torch_device, name="Opponent")
         self.opponent_agents.append(opponent_agent)
 
         # self.scoring_agents_update_freq = 10000
         self.scoring_freq = 1000
+        self.target_score = 1800
         self.scoring_agents = deque(maxlen=1)
-        scoring_agent = MinimaxAgent(Player.WHITE, max_depth=0)
+        self.scoring_agents.append(scoring_model)
+        scoring_agent = MinimaxAgent(Player.WHITE, max_depth=1)
         if pre_trained_model_path != "":
-            scoring_model = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
-            scoring_model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
+            # scoring_model = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
+            # scoring_model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
+            scoring_model = DQN(self.input_dim, self.output_dim, self.hidden_dim, initial_weights=pre_trained_model_path)
             scoring_agent = DQNAgent(Player.WHITE, scoring_model, torch_device=self.torch_device, name="Scoring")
         self.scoring_agents.append(scoring_agent)
 
@@ -146,22 +155,12 @@ class DQNTrain:
                 optimizer (torch.optim.Optimizer): Optimizer for training the model.
                 loss_fn (nn.Module): Loss function for DQN.
             """
-        set_seed()
+        # set_seed(random.randint(0,1000))
 
-        self.model = DQN(self.input_dim, self.output_dim, self.hidden_dim)
-        if pre_trained_model_path != "":
-            # init model from pre-trained model
-            self.model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
-        else:
-            # init model with xavier uniform weights and zeros for bias
-            for layer in self.model.children():
-                if isinstance(layer, nn.Linear):
-                    nn.init.xavier_uniform_(layer.weight)
-                    nn.init.zeros_(layer.bias)
+        self.model = DQN(self.input_dim, self.output_dim, self.hidden_dim, initial_weights=pre_trained_model_path)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/100), gamma=0.91)
-
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/1000), gamma=0.999)
         self.target_model = DQN(self.input_dim, self.output_dim, self.hidden_dim)
         self.target_model.load_state_dict(self.model.state_dict())  # Initialize target model with same weights
         self.model.to(self.torch_device)
@@ -176,15 +175,23 @@ class DQNTrain:
         Return:
             model (DQN): The trained DQN model.
         """
-
+        done = False
         for game in tqdm(range(self.total_games), desc="Training DQN"):
+
+            # if our score above target score, we can stop training to prevent overfitting
+            if done:
+                break
 
             # Play a training game
             self.init_game()
             self.play_game()
 
+            # train if replay buffer is full
+            if self.replay_buffer.is_buffer_ready:
+                self.train_model(self.replay_buffer)
+
             # Update epsilon
-            self.update_epsilon_boltzmann(game)
+            self.update_epsilon_elo(0.95, 0.75)
 
             # Update exploration flag
             self.is_exploration = random.random() < self.epsilon
@@ -193,7 +200,7 @@ class DQNTrain:
             if game % self.target_model_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
 
-            self.test_model(game)
+            done = self.test_model(game)
             self.epoch += 1
             training_stats["epoch"] = self.epoch
 
@@ -202,18 +209,18 @@ class DQNTrain:
                 #     self.scoring_agents.append(DQNAgent(Player.WHITE, self.target_model, torch_device=self.torch_device,
                 #                  name="Self{}".format(game)))
 
-                # # Update opponent agents
-                # if game % self.opponent_update_freq == 0 and game > 0:
-                #     self.opponent_agents.append(
-                #         DQNAgent(Player.WHITE, self.target_model, torch_device=self.torch_device,
-                #                  name="Self{}".format(game)))
+            # Update opponent agents
+            if game % self.opponent_update_freq == 0 and game > 0:
+                self.opponent_agents.append(
+                    DQNAgent(Player.WHITE, self.target_model, torch_device=self.torch_device,
+                        name="Self{}".format(game)))
 
         return self.model
 
     def init_game(self, bw_ratio=0.7):
         # Based on BLACK vs WHITE training games ration
-        self.active_player = Player.BLACK if random.random() < bw_ratio else Player.WHITE
-        # self.active_player = opponent(self.active_player)
+        # self.active_player = Player.BLACK if random.random() < bw_ratio else Player.WHITE
+        self.active_player = opponent(self.active_player)
 
     def play_game(self):
         """
@@ -225,10 +232,10 @@ class DQNTrain:
         game_state = GameState()
         while not game_state.game_over:
             game_state_before, move_info = self.play_turn(game_state)
-            game_history = [] # List of (move_info, game_state) tuples
+            # game_history = [] # List of (move_info, game_state) tuples
             assert move_info.player == self.active_player
             if move_info is not None:
-                game_history.append((move_info, game_state_before))
+                game_history = [(move_info, game_state_before)]  # List of (move_info, game_state) tuples
                 game_episode_state = game_state.clone()
                 winner, illegal_move = self.play_episode(game_episode_state, game_history)
                 self.add_to_replay_buffer(game_history, self.game_result_reward(winner, illegal_move))
@@ -273,10 +280,10 @@ class DQNTrain:
             done = 0
             next_state_board = game_state.board
 
-            # train if replay buffer is full
-            if self.replay_buffer.is_buffer_ready:
-                self.train_model(self.replay_buffer)
-                self.replay_buffer.purge()
+            # # train if replay buffer is full
+            # if self.replay_buffer.is_buffer_ready:
+            #     self.train_model(self.replay_buffer)
+            #     self.replay_buffer.purge()
 
     def play_turn(self, game_state):
         """
@@ -314,11 +321,13 @@ class DQNTrain:
         Return:
             Position: The chosen action
         """
+        weight = 1
         opponent_moves = defaultdict(lambda: 0)
         for agent in self.opponent_agents:
             agent.player = opponent(self.active_player)
             move = agent.get_best_move(game_state)
-            opponent_moves[move] = opponent_moves[move] + 1
+            opponent_moves[move] = (opponent_moves[move] + 1) * weight
+            weight = weight * 1.25
         return max(opponent_moves, key=opponent_moves.get)
 
     def choose_action(self, game_state, override_exploration=False):
@@ -463,7 +472,25 @@ class DQNTrain:
         """
         self.epsilon = (self.epsilon_min + (self.epsilon_max - self.epsilon_min) *
                         np.exp(self.epsilon_decay_rate * current_step))
+        # self.epsilon = self.update_epsilon_elo()
         training_stats["epsilon"] = self.epsilon
+
+    def update_epsilon_elo(self, epsilon_decay_reduce, epsilon_decay_increase):
+        """
+        Adjust epsilon dynamically based on ELO performance.
+
+        - If ELO increases, reduce exploration.
+        - If ELO stagnates or decreases, increase exploration to adapt.
+        """
+        if int(self.elo_current) > int(self.elo_previous):
+            # Reduce exploration when improving
+            self.epsilon = max(self.epsilon_min, self.epsilon * epsilon_decay_reduce)
+        elif int(self.elo_current) < int(self.elo_previous):
+            # Increase exploration when performance stagnates
+            self.epsilon = min(self.epsilon_max, self.epsilon / epsilon_decay_increase)
+        self.elo_current = self.elo_previous
+        training_stats["epsilon"] = self.epsilon
+        return self.epsilon
 
     def test_model(self, game, total_games=10):
 
@@ -473,7 +500,6 @@ class DQNTrain:
 
         if game % self.scoring_freq == 0:
             for scoring_agent in self.scoring_agents:
-                # wins = 0
                 # Score against earlier versions of self
                 for i in range(total_games):
 
@@ -485,7 +511,6 @@ class DQNTrain:
                     winner = play_test_game()
                     self.scorer.update_ratings("self", "scoring_model",
                                                result_a=(winner == Player.BLACK))
-                    # wins = wins + (winner == Player.BLACK)
 
                     # Score as WHITE
                     white_agent = DQNAgent(Player.WHITE, self.target_model,
@@ -495,10 +520,13 @@ class DQNTrain:
                     winner = play_test_game()
                     self.scorer.update_ratings("self", "scoring_model",
                                                result_a=(winner == Player.WHITE))
-                    # wins = wins + (winner == Player.WHITE)
-
 
                 training_stats["score"] = float(self.scorer.ratings["self"])
-                # training_stats["score"] = wins / (total_games * 2)
+                self.elo_previous = self.elo_current
+                self.elo_current = self.scorer.ratings["self"]
+
+        if self.elo_current >= self.target_score:
+            return True
+        return False
 
 

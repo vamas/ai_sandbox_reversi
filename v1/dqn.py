@@ -9,7 +9,8 @@ class DQN(nn.Module):
                  input_dim,
                  output_dim,
                  hidden_dim,
-                 dropout_rate=0.2):
+                 dropout_rate=0.2,
+                 initial_weights=""):
         """
         Initialize the Deep Q-Network with neuron drop out rate
 
@@ -26,6 +27,21 @@ class DQN(nn.Module):
         self.fc3 = nn.Linear(hidden_dim, hidden_dim)
         self.dropout3 = nn.Dropout(p=dropout_rate)
         self.fc4 = nn.Linear(hidden_dim, output_dim)
+
+        # # init model with xavier uniform weights and zeros for bias
+        # for layer in self.children():
+        #     if isinstance(layer, nn.Linear):
+        #         nn.init.xavier_uniform_(layer.weight)
+        #         nn.init.zeros_(layer.bias)
+
+        if initial_weights != "":
+            # init model from pre-trained model
+            self.load_state_dict(torch.load(initial_weights, weights_only=True))
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         """
