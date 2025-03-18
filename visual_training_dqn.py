@@ -40,17 +40,17 @@ async def main():
     # batch_size = 64
     # hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
 
-    total_games_ar = [10000]
+    total_games_ar = [100000]
     epsilon = 1.0
     discount_factor = 0.3
-    reward_decay = 0.6
+    reward_decay = 0.8
     learning_rate = 0.001
     epsilon_min = 0.1
     batch_size = 64
-    memory_size = batch_size * 10
-    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 12
+    memory_size = 10000
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 120
 
-    for i in range(3):
+    for i in range(1):
         await train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, learning_rate, memory_size, reward_decay,
                 total_games_ar)
 
@@ -78,11 +78,11 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
                                 # MinimaxAgent(Player.WHITE, 4),
                             ],
                             testing_agents=[
-                                # RandomAgent(Player.WHITE),
+                                RandomAgent(Player.WHITE),
                                 # MinimaxAgent(Player.WHITE, 0, "Heuristic"),
                                 # MinimaxAgent(Player.WHITE, 1, "Minimax1"),
                                 # MinimaxAgent(Player.WHITE, 2, "Minimax2"),
-                                MinimaxAgent(Player.WHITE, 3, "Minimax3"),
+                                # MinimaxAgent(Player.WHITE, 3, "Minimax3"),
                             ],
                             reward_decay=reward_decay,
                             memory_size=memory_size,

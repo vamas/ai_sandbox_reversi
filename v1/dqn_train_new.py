@@ -161,7 +161,6 @@ class DQNTrain:
         Return:
             model (DQN): The trained DQN model.
         """
-
         for game in tqdm(range(self.total_games), desc="Training DQN"):
 
             # Play a training game
@@ -330,63 +329,65 @@ class DQNTrain:
         Args:
             replay_buffer:
         """
-        # Sample minibatch
-        # Simple replay buffer
-        states, actions, rewards, next_states, dones, valid_moves = replay_buffer.sample(self.batch_size)
 
-        # # Prioritized replay buffer
-        # beta = 0.4  # Compensation factor for importance sampling
-        # batch, indices, weights = replay_buffer.sample(self.batch_size, beta)
-        # states, actions, rewards, next_states, dones, valid_moves = zip(*batch)
+        for sample in replay_buffer.sample(self.batch_size):
 
-        # Convert to tensors
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.long)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
-        valid_moves = torch.tensor(valid_moves, dtype=torch.float32)
+            # Sample minibatch
+            # Simple replay buffer
+            states, actions, rewards, next_states, dones, valid_moves = sample
 
-        # Compute Q-values
-        q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+            # # Prioritized replay buffer
+            # beta = 0.4  # Compensation factor for importance sampling
+            # batch, indices, weights = replay_buffer.sample(self.batch_size, beta)
+            # states, actions, rewards, next_states, dones, valid_moves = zip(*batch)
 
-        # # Next state q value Single Q learning
-        # next_q_values = self.target_model(next_states)
-        # next_q_values[valid_moves == 0] = -float("inf")  # Mask invalid actions
-        # next_q_values = next_q_values.max(1)[0]
+            # Convert to tensors
+            states = torch.tensor(states, dtype=torch.float32)
+            actions = torch.tensor(actions, dtype=torch.long)
+            rewards = torch.tensor(rewards, dtype=torch.float32)
+            next_states = torch.tensor(next_states, dtype=torch.float32)
+            dones = torch.tensor(dones, dtype=torch.float32)
+            valid_moves = torch.tensor(valid_moves, dtype=torch.float32)
 
-        # Next state q value Double Q learning
-        next_q_values_online = self.model(next_states)
-        next_q_values_online[valid_moves == 0] = -float("inf")  # Mask invalid actions
-        next_q_values = self.target_model(next_states).gather(1, next_q_values_online.argmax(1).unsqueeze(1)).squeeze(1)
+            # Compute Q-values
+            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
 
-        # Compute targets using Bellmans equation
-        # For the end states we don't add the discounted future rewards
-        targets = rewards + (1 - dones) * self.discount_factor * next_q_values
+            # # Next state q value Single Q learning
+            # next_q_values = self.target_model(next_states)
+            # next_q_values[valid_moves == 0] = -float("inf")  # Mask invalid actions
+            # next_q_values = next_q_values.max(1)[0]
 
-        # During training, after computing Q-values
-        with torch.no_grad():
-            old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
-        # Calculate Q-value changes
-        q_value_changes = torch.abs(old_q_values - targets)
-        # Average Q-value change
-        avg_q_value_change = q_value_changes.mean().item()
-        # Log this for analysis
-        training_stats["avg_q_value_change"] = avg_q_value_change
+            # Next state q value Double Q learning
+            next_q_values_online = self.model(next_states)
+            next_q_values_online[valid_moves == 0] = -float("inf")  # Mask invalid actions
+            next_q_values = self.target_model(next_states).gather(1, next_q_values_online.argmax(1).unsqueeze(1)).squeeze(1)
 
-        # Compute loss
-        loss = self.loss_fn(q_values, targets)
+            # Compute targets using Bellmans equation
+            # For the end states we don't add the discounted future rewards
+            targets = rewards + (1 - dones) * self.discount_factor * next_q_values
 
-        # Backpropagation
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+            # During training, after computing Q-values
+            with torch.no_grad():
+                old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
+            # Calculate Q-value changes
+            q_value_changes = torch.abs(old_q_values - targets)
+            # Average Q-value change
+            avg_q_value_change = q_value_changes.mean().item()
+            # Log this for analysis
+            training_stats["avg_q_value_change"] = avg_q_value_change
 
-        # Update learning rate
-        self.scheduler.step()
-        training_stats["learning_rate"] = self.optimizer.param_groups[0]['lr']
+            # Compute loss
+            loss = self.loss_fn(q_values, targets)
 
-        # self.replay_buffer.purge()
+            # Backpropagation
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            # Update learning rate
+            self.scheduler.step()
+            training_stats["learning_rate"] = self.optimizer.param_groups[0]['lr']
+
 
     def game_result_reward(self, winner, illegal_move=False):
         if winner == Player.NONE:
