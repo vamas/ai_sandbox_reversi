@@ -41,7 +41,7 @@ def send_metrics():
     # Then check if the buffer is full
     if len(metrics_buffer) >= metrics_buffer_size:
         # Flush the buffer asynchronously (using a copy)
-        write_points(metrics_buffer.copy())
+        # write_points(metrics_buffer.copy())
         metrics_buffer.clear()
 
 def write_points(buffer):

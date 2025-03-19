@@ -1,4 +1,11 @@
-DEFAULT_SCORE = 1500.0
+DEFAULT_SCORE = 0
+GOOD_MODEL_SCORE = 300
+
+"""
++200 ELO → Player A should win ~75% of games.
++400 ELO → Player A is almost unbeatable (90%+ wins).
++600 ELO → The weaker player will almost never win.
+"""
 
 class ELOSystem:
     def __init__(self, k_factor=32):

@@ -30,7 +30,7 @@ hidden_dim = 0
 if BOARD_SHAPE == 8:
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 128
 elif BOARD_SHAPE == 4:
-    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 32
+    hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 64
 elif BOARD_SHAPE == 6:
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 64
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
         # against opponent level
         opponent_level_results = []
-        for opponent_level in range(0, 6):
+        for opponent_level in range(0, 8):
 
             # flip black and white
             my_wins = 0
@@ -86,3 +86,5 @@ if __name__ == "__main__":
 
 
 # W9HPASFA95AH
+
+# [[98, 72, 93, 73, 78, 78]]

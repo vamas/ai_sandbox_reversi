@@ -1,15 +1,12 @@
 # Train qtable agent against random agent
-import copy
 import time
 from collections import defaultdict, deque
 import random
 import uuid
-
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from prompt_toolkit.contrib.telnet import TelnetServer
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 
@@ -28,7 +25,7 @@ from v1.position import Position, SkipPosition
 from v1.random_agent import RandomAgent
 from v1.gamemanager import GameManager
 from infrastructure.metric_logger import training_stats, chart_colors
-from v1.scoring import ELOSystem, DEFAULT_SCORE
+from v1.scoring import ELOSystem, DEFAULT_SCORE, GOOD_MODEL_SCORE
 
 WIN_VALUE = 1.0
 DRAW_VALUE = 0.5
@@ -70,9 +67,13 @@ class NeuralNetworkTrainer:
                  epsilon_min=0.1,
                  self_instances=1,
                  pre_trained_model_path=None,
-                 scoring_model=RandomAgent(Player.WHITE),
-                 target_score=1800):
+                 opponent_model_paths=None,
+                 scoring_model_paths=None):
 
+        if scoring_model_paths is None:
+            scoring_model_paths = []
+        if opponent_model_paths is None:
+            opponent_model_paths = []
         self.learner_name = "Othello DQN"
 
         training_stats["learner"] = self.learner_name
@@ -81,6 +82,7 @@ class NeuralNetworkTrainer:
 
         self.total_games = total_games
         self.learning_rate = learning_rate
+        self.pre_trained_model_path = pre_trained_model_path
         self.discount_factor = discount_factor
         self.epsilon = epsilon
         self.reward_decay = reward_decay
@@ -98,57 +100,50 @@ class NeuralNetworkTrainer:
         self.epsilon_max = epsilon
         self.epsilon_decay_rate = np.log(self.epsilon_min / self.epsilon) / self.total_games
         self.scheduler = None
-        self.initialize_model(pre_trained_model_path)
+        self.initialize_model()
         self.active_player = Player.BLACK
         self.run_id = str(uuid.uuid4())
         self.epoch = 0
         self.episode = 0
         self.replay_buffer = ReplayBuffer(self.memory_size)
         self.is_exploration = True
-        self.scorer = ELOSystem()
         self.target_model_update_freq = 1000  # Update target q-network every other 1000 steps (played games)
 
-        self.elo_current = 1500
-        self.elo_previous = 1500
+        self.elo_current = DEFAULT_SCORE
+        self.elo_previous = DEFAULT_SCORE
+        self.elo_best_score = DEFAULT_SCORE
 
-        self.opponent_update_freq = 100000
+        # Opponent configuration
         self.opponent_agents = deque(maxlen=5)
-        opponent_agent = RandomAgent(Player.WHITE)
-        if pre_trained_model_path != "":
-            # opponent_model = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
-            # opponent_model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
-            opponent_model = NeuralNet(self.hidden_dim, initial_weights=pre_trained_model_path)
-            opponent_agent = NeuralNetworkAgent(Player.WHITE, opponent_model, torch_device=self.torch_device, name="Opponent")
-        self.opponent_agents.append(opponent_agent)
+        if not opponent_model_paths:
+            self.opponent_agents.append(RandomAgent(Player.WHITE))
+            self.opponent_agents.append(MinimaxAgent(Player.WHITE, 0))
+            self.opponent_agents.append(MinimaxAgent(Player.WHITE, 1))
+        for opponent_model_path in opponent_model_paths:
+            if opponent_model_path != "":
+                opponent_model = NeuralNet(self.hidden_dim, initial_weights=opponent_model_path)
+                opponent_agent = NeuralNetworkAgent(Player.WHITE, opponent_model, torch_device=self.torch_device, name="Opponent")
+                self.opponent_agents.append(opponent_agent)
 
-        # self.scoring_agents_update_freq = 10000
+        # Scoring configuration
         self.scoring_freq = 1000
-        self.target_score = 1700
         self.scoring_agents = deque(maxlen=1)
-        self.scoring_agents.append(scoring_model)
-        scoring_agent = MinimaxAgent(Player.WHITE, max_depth=1)
-        if pre_trained_model_path != "":
-            # scoring_model = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
-            # scoring_model.load_state_dict(torch.load(pre_trained_model_path, weights_only=True))
-            scoring_model = NeuralNet(self.hidden_dim, initial_weights=pre_trained_model_path)
-            scoring_agent = NeuralNetworkAgent(Player.WHITE, scoring_model, torch_device=self.torch_device, name="Scoring")
-        self.scoring_agents.append(scoring_agent)
+        if not scoring_model_paths:
+            self.scoring_agents.append(MinimaxAgent(Player.WHITE, max_depth=1))
+        for scoring_model_path in scoring_model_paths:
+            if scoring_model_path != "":
+                scoring_model = NeuralNet(self.hidden_dim, initial_weights=scoring_model_path)
+                scoring_agent = NeuralNetworkAgent(Player.WHITE, scoring_model, torch_device=self.torch_device, name="Scoring")
+                self.scoring_agents.append(scoring_agent)
 
-    def initialize_model(self, pre_trained_model_path):
+    def initialize_model(self):
         """
             Initialize the DQN model, optimizer, and loss function.
+        """
 
-            Args:
-                pre_trained_model_path: pre-trained model weights
-
-            Returns:
-                model (DQN): The initialized DQN model.
-                optimizer (torch.optim.Optimizer): Optimizer for training the model.
-                loss_fn (nn.Module): Loss function for DQN.
-            """
         # set_seed(random.randint(0,1000))
 
-        self.model = NeuralNet(self.hidden_dim, initial_weights=pre_trained_model_path)
+        self.model = NeuralNet(self.hidden_dim, initial_weights=self.pre_trained_model_path)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/100), gamma=0.91)
@@ -166,11 +161,12 @@ class NeuralNetworkTrainer:
         Return:
             model (DQN): The trained DQN model.
         """
-        done = False
-        for game in tqdm(range(self.total_games), desc="Training DQN") or self.elo_current > self.target_score:
+        pbar = tqdm(range(self.total_games), desc="Training DQN")
+        # for game in tqdm(range(self.total_games), desc="Training DQN") or self.elo_current >= GOOD_MODEL_SCORE:
+        for game in pbar:
 
             # if our score above target score, we can stop training to prevent overfitting
-            if done:
+            if self.elo_current >= GOOD_MODEL_SCORE:
                 break
 
             # Play a training game
@@ -191,26 +187,22 @@ class NeuralNetworkTrainer:
             if game % self.target_model_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
 
-            done = self.test_model(game)
+            self.test_model(game)
             self.epoch += 1
             training_stats["epoch"] = self.epoch
 
-                # # Freeze model in history to test against it
-                # if game % self.scoring_agents_update_freq == 0 and game > 0:
-                #     self.scoring_agents.append(DQNAgent(Player.WHITE, self.target_model, torch_device=self.torch_device,
-                #                  name="Self{}".format(game)))
-
-            # Update opponent agents
-            if game % self.opponent_update_freq == 0 and game > 0:
-                self.opponent_agents.append(
-                    NeuralNetworkAgent(Player.WHITE, self.target_model, torch_device=self.torch_device,
-                                       name="Self{}".format(game)))
+            pbar.set_postfix(
+                { "Score": self.elo_current,
+                  "Best Score": self.elo_best_score,
+                  "Avg Q-Value Change": training_stats["avg_q_value_change"],
+                  "Epsilon": training_stats["epsilon"],
+                  "Learning Rate": training_stats["learning_rate"]
+                })
 
         return self.model
 
-    def init_game(self, bw_ratio=0.7):
-        # Based on BLACK vs WHITE training games ration
-        # self.active_player = Player.BLACK if random.random() < bw_ratio else Player.WHITE
+    def init_game(self):
+        """ Init game alternating training player color"""
         self.active_player = opponent(self.active_player)
 
     def play_game(self):
@@ -321,12 +313,11 @@ class NeuralNetworkTrainer:
             weight = weight * 1.25
         return max(opponent_moves, key=opponent_moves.get)
 
-    def choose_action(self, game_state, override_exploration=False):
+    def choose_action(self, game_state):
         """
             Choose an action based on the epsilon-greedy policy.
         Args:
             game_state: current game_state
-            override_exploration: hint to override exploration and choose exploitation
         Return:
             Position: The chosen action
         """
@@ -456,8 +447,6 @@ class NeuralNetworkTrainer:
         Update epsilon using Boltzmann exploration policy.
 
         Args:
-            min_epsilon (float): Minimum value of epsilon.
-            decay_rate (float): Decay rate for epsilon.
             current_step (int): Current step or episode number.
 
         Returns:
@@ -482,13 +471,15 @@ class NeuralNetworkTrainer:
             self.epsilon = min(self.epsilon_max, self.epsilon / epsilon_decay_increase)
         training_stats["epsilon"] = self.epsilon
 
-    def test_model(self, game, total_games=10):
+    def test_model(self, game, total_games=100):
 
         def play_test_game():
             game_mgr = GameManager(black_agent, white_agent)
             return game_mgr.run()
 
         if game % self.scoring_freq == 0:
+
+            scorer = ELOSystem()
             for scoring_agent in self.scoring_agents:
                 # Score against earlier versions of self
                 for i in range(total_games):
@@ -499,7 +490,7 @@ class NeuralNetworkTrainer:
                     white_agent = scoring_agent
                     white_agent.player = Player.WHITE
                     winner = play_test_game()
-                    self.scorer.update_ratings("self", "scoring_model",
+                    scorer.update_ratings("self", "scoring_model",
                                                result_a=(winner == Player.BLACK))
 
                     # Score as WHITE
@@ -508,16 +499,14 @@ class NeuralNetworkTrainer:
                     black_agent = scoring_agent
                     black_agent.player = Player.BLACK
                     winner = play_test_game()
-                    self.scorer.update_ratings("self", "scoring_model",
+                    scorer.update_ratings("self", "scoring_model",
                                                result_a=(winner == Player.WHITE))
 
-                training_stats["score"] = float(self.scorer.ratings["self"])
+                score = scorer.ratings["self"] - scorer.ratings["scoring_model"]
+                training_stats["score"] = float(score)
                 self.elo_previous = self.elo_current
-                self.elo_current = self.scorer.ratings["self"]
-                self.update_epsilon_elo(0.95, 0.75)
-
-        if self.elo_current >= self.target_score:
-            return True
-        return False
-
+                self.elo_current = score
+                if self.elo_current > self.elo_best_score:
+                    self.elo_best_score = self.elo_current
+                # self.update_epsilon_elo(0.95, 0.75)
 
