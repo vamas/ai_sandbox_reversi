@@ -4,7 +4,7 @@ import sys
 import torch
 from tqdm import tqdm
 
-from v1.dqn_agent import DQNAgent
+from v1.dqn_agent import NeuralNetworkAgent
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
 from v1.gamemanager_console import GameManager

@@ -9,7 +9,7 @@ from anyio import sleep
 
 from infrastructure.metric_logger import periodic_logger_task
 from v1.dqn_agent import NeuralNetworkAgent
-from v1.dqn_train_selfplay import NeuralNetworkTrainer
+from v1.cnn_train_selfplay import NeuralNetworkTrainer
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
 from v1.random_agent import RandomAgent
@@ -48,7 +48,7 @@ if BOARD_SHAPE == 8:
     memory_size = batch_size * 1000
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 128
 elif BOARD_SHAPE == 4:
-    memory_size = 10000
+    memory_size = batch_size * 100
     hidden_dim = BOARD_SHAPE * BOARD_SHAPE * 32
 elif BOARD_SHAPE == 6:
     memory_size = batch_size * 100
@@ -81,24 +81,24 @@ async def train(batch_size, discount_factor, epsilon, epsilon_min, hidden_dim, l
     # Initialize the model for an 8x8 Othello board black
     pre_trained_model_path = ""
     scoring_model_path = ""
-    # pre_trained_model_path = "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, 0)
+    pre_trained_model_path = "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, 0)
     # pre_trained_model_path = "{}dqn_model_full_20000_{}.pth".format(models_path, 0)
     # scoring_model = MinimaxAgent(Player.WHITE, 2)
-    # scoring_model_path = "{}dqn_model_full_20000_{}.pth".format(models_path, 0)
-    for i in range(0, 25):
+    scoring_model_path = "{}dqn_model_full_{}_{}.pth".format(models_path, total_games, 0)
+    for i in range(1, 6):
         training = NeuralNetworkTrainer(total_games=total_games,
-                                        torch_device=get_device(True),
-                                        epsilon=epsilon,
-                                        learning_rate=learning_rate,
-                                        discount_factor=discount_factor,
-                                        reward_decay=reward_decay,
-                                        memory_size=memory_size,
-                                        batch_size=batch_size,
-                                        epsilon_min=epsilon_min,
-                                        hidden_dim=hidden_dim,
-                                        self_instances=1,
-                                        pre_trained_model_path=pre_trained_model_path,
-                                        scoring_model=scoring_model_path)
+                                torch_device=get_device(True),
+                                epsilon=epsilon,
+                                learning_rate=learning_rate,
+                                discount_factor=discount_factor,
+                                reward_decay=reward_decay,
+                                memory_size=memory_size,
+                                batch_size=batch_size,
+                                epsilon_min=epsilon_min,
+                                hidden_dim=hidden_dim,
+                                self_instances=1,
+                                pre_trained_model_path=pre_trained_model_path,
+                                scoring_model=scoring_model_path)
         await sleep(log_interval)
         model = await asyncio.to_thread(training.train_dqn)
         # Save the model

@@ -3,11 +3,11 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-class DQN(nn.Module):
+from v1.gamestate import BOARD_SHAPE
+
+class NeuralNet(nn.Module):
 
     def __init__(self,
-                 input_dim,
-                 output_dim,
                  hidden_dim,
                  dropout_rate=0.2,
                  initial_weights=""):
@@ -19,14 +19,14 @@ class DQN(nn.Module):
             output_dim (int): Number of possible actions (legal moves).
             hidden_dim (int): Number of units in the hidden layers.
         """
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        super(NeuralNet, self).__init__()
+        self.fc1 = nn.Linear(BOARD_SHAPE*BOARD_SHAPE+BOARD_SHAPE*BOARD_SHAPE, hidden_dim)
         self.dropout1 = nn.Dropout(p=dropout_rate)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.dropout2 = nn.Dropout(p=dropout_rate)
         self.fc3 = nn.Linear(hidden_dim, hidden_dim)
         self.dropout3 = nn.Dropout(p=dropout_rate)
-        self.fc4 = nn.Linear(hidden_dim, output_dim)
+        self.fc4 = nn.Linear(hidden_dim, BOARD_SHAPE*BOARD_SHAPE+1)
 
         # # init model with xavier uniform weights and zeros for bias
         # for layer in self.children():

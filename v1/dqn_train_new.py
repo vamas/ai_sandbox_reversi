@@ -12,8 +12,8 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 
-from v1.dqn import DQN
-from v1.dqn_agent import DQNAgent
+from v1.dqn import NeuralNet
+from v1.dqn_agent import NeuralNetworkAgent
 from v1.dqn_helpers import (board_one_hot_encode,
                             action_decode, action_encode,
                             legal_moves_mask, get_symmetrical_states)
@@ -152,9 +152,9 @@ class DQNTrain:
         input_dim = self.input_dim  # Flattened board as input
         output_dim = self.output_dim  # Total number of possible actions
 
-        set_seed()
+        # set_seed()
 
-        self.model = DQN(input_dim, output_dim, self.hidden_dim)
+        self.model = NeuralNet(input_dim, output_dim, self.hidden_dim)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=int(self.total_games/100), gamma=0.75)
 
@@ -165,7 +165,7 @@ class DQNTrain:
         #        nn.init.xavier_uniform_(layer.weight)
         #        nn.init.zeros_(layer.bias)
 
-        self.target_model = DQN(input_dim, output_dim, self.hidden_dim)
+        self.target_model = NeuralNet(input_dim, output_dim, self.hidden_dim)
         self.target_model.load_state_dict(self.model.state_dict())  # Initialize with same weights
         self.model.to(self.torch_device)
         self.target_model.to(self.torch_device)
@@ -363,59 +363,61 @@ class DQNTrain:
 
         # Sample minibatch
         # Simple replay buffer
-        states, actions, rewards, next_states, dones, valid_moves = replay_buffer.sample(self.batch_size)
+        for batch in replay_buffer.sample(self.batch_size):
 
-        # # Prioritized replay buffer
-        # beta = 0.4  # Compensation factor for importance sampling
-        # batch, indices, weights = replay_buffer.sample(self.batch_size, beta)
-        # states, actions, rewards, next_states, dones, valid_moves = zip(*batch)
+            states, actions, rewards, next_states, dones, valid_moves = batch
 
-        # Convert to tensors
-        states = torch.tensor(states, dtype=torch.float32).to(self.torch_device)
-        actions = torch.tensor(actions, dtype=torch.long).to(self.torch_device)
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.torch_device)
-        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.torch_device)
-        dones = torch.tensor(dones, dtype=torch.float32).to(self.torch_device)
-        valid_moves = torch.tensor(valid_moves, dtype=torch.float32).to(self.torch_device)
+            # # Prioritized replay buffer
+            # beta = 0.4  # Compensation factor for importance sampling
+            # batch, indices, weights = replay_buffer.sample(self.batch_size, beta)
+            # states, actions, rewards, next_states, dones, valid_moves = zip(*batch)
 
-        # Compute Q-values
-        q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+            # Convert to tensors
+            states = torch.tensor(states, dtype=torch.float32).to(self.torch_device)
+            actions = torch.tensor(actions, dtype=torch.long).to(self.torch_device)
+            rewards = torch.tensor(rewards, dtype=torch.float32).to(self.torch_device)
+            next_states = torch.tensor(next_states, dtype=torch.float32).to(self.torch_device)
+            dones = torch.tensor(dones, dtype=torch.float32).to(self.torch_device)
+            valid_moves = torch.tensor(valid_moves, dtype=torch.float32).to(self.torch_device)
 
-        # # Next state q value Single Q learning
-        # next_q_values = self.target_model(next_states)
-        # next_q_values[valid_moves == 0] = LOSS_VALUE # -float("inf")  # Mask invalid actions
-        # next_q_values = next_q_values.max(1)[0]
+            # Compute Q-values
+            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
 
-        # Next state q value Double Q learning
-        next_q_values_online = self.model(next_states)
-        next_q_values_online[valid_moves == 0] = LOSS_VALUE # -float("inf")  # Mask invalid actions
-        next_q_values = self.target_model(next_states).gather(1, next_q_values_online.argmax(1).unsqueeze(1)).squeeze(1)
+            # # Next state q value Single Q learning
+            # next_q_values = self.target_model(next_states)
+            # next_q_values[valid_moves == 0] = LOSS_VALUE # -float("inf")  # Mask invalid actions
+            # next_q_values = next_q_values.max(1)[0]
 
-        # Compute targets using Bellmans equation
-        # For the end states we don't add the discounted future rewards
-        targets = rewards + (1 - dones) * self.discount_factor * next_q_values
+            # Next state q value Double Q learning
+            next_q_values_online = self.model(next_states)
+            next_q_values_online[valid_moves == 0] = LOSS_VALUE # -float("inf")  # Mask invalid actions
+            next_q_values = self.target_model(next_states).gather(1, next_q_values_online.argmax(1).unsqueeze(1)).squeeze(1)
 
-        # During training, after computing Q-values
-        with torch.no_grad():
-            old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
-        # Calculate Q-value changes
-        q_value_changes = torch.abs(old_q_values - targets)
-        # Average Q-value change
-        avg_q_value_change = q_value_changes.mean().item()
-        # Log this for analysis
-        training_stats["avg_q_value_change"] = avg_q_value_change
+            # Compute targets using Bellmans equation
+            # For the end states we don't add the discounted future rewards
+            targets = rewards + (1 - dones) * self.discount_factor * next_q_values
 
-        # Compute loss
-        loss = self.loss_fn(q_values, targets)
+            # During training, after computing Q-values
+            with torch.no_grad():
+                old_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)  # Shape: [B]
+            # Calculate Q-value changes
+            q_value_changes = torch.abs(old_q_values - targets)
+            # Average Q-value change
+            avg_q_value_change = q_value_changes.mean().item()
+            # Log this for analysis
+            training_stats["avg_q_value_change"] = avg_q_value_change
 
-        # Backpropagation
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+            # Compute loss
+            loss = self.loss_fn(q_values, targets)
 
-        # Update learning rate
-        self.scheduler.step()
-        training_stats["learning_rate"] = self.optimizer.param_groups[0]['lr']
+            # Backpropagation
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            # Update learning rate
+            self.scheduler.step()
+            training_stats["learning_rate"] = self.optimizer.param_groups[0]['lr']
 
         episode_time = time.time() - start_time
         training_stats["training_time"] = episode_time
@@ -464,15 +466,15 @@ class DQNTrain:
 
     def add_trained_model_to_opponents(self, model):
         if model is not None:
-            self.opponent_agents.extend([DQNAgent(Player.WHITE, model, torch_device=self.torch_device, name="Self")]
+            self.opponent_agents.extend([NeuralNetworkAgent(Player.WHITE, model, torch_device=self.torch_device, name="Self")]
                                         * self.self_instances)
 
     def test_model(self, game, freq=1000, total_games=100):
         def play_random_game(agent, player):
             agent.player = opponent(player)
-            agent_black = DQNAgent(player, self.target_model, torch_device=self.torch_device) \
+            agent_black = NeuralNetworkAgent(player, self.target_model, torch_device=self.torch_device) \
                 if player == Player.BLACK else agent
-            agent_white = DQNAgent(player, self.target_model, torch_device=self.torch_device) \
+            agent_white = NeuralNetworkAgent(player, self.target_model, torch_device=self.torch_device) \
                 if player == Player.WHITE else agent
             game_mgr = GameManager(agent_black, agent_white)
             return game_mgr.run()

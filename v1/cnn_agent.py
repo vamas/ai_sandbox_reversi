@@ -3,12 +3,12 @@ import random
 import torch
 
 from v1.agent import Agent, AgentType
-from v1.dqn_helpers import (BOARD_SHAPE, board_one_hot_encode, position_one_hot_encode,
+from v1.cnn_helpers import (BOARD_SHAPE, board_one_hot_encode, position_one_hot_encode,
                             action_decode, one_hot_encoding_to_idx, action_encode, legal_moves_mask)
 from v1.position import SkipPosition
 
 class NeuralNetworkAgent(Agent):
-    def __init__(self, player, model, torch_device, name="DQNAgent"):
+    def __init__(self, player, model, torch_device, name="CNNAgent"):
         super().__init__(player, AgentType.COMPUTER, name)
         self.model = model
         self.model.to(torch_device)

@@ -3,8 +3,8 @@ import sys
 import torch
 from tqdm import tqdm
 
-from v1.dqn import DQN
-from v1.dqn_agent import DQNAgent
+from v1.dqn import NeuralNet
+from v1.dqn_agent import NeuralNetworkAgent
 from v1.gamestate import BOARD_SHAPE
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
@@ -37,12 +37,12 @@ elif BOARD_SHAPE == 6:
 games = 100
 if __name__ == "__main__":
 
-    model_b = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
-    model_w = DQN(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
+    model_b = NeuralNet(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
+    model_w = NeuralNet(BOARD_SHAPE * BOARD_SHAPE + BOARD_SHAPE * BOARD_SHAPE, BOARD_SHAPE * BOARD_SHAPE + 1, hidden_dim)
     model_b.load_state_dict(torch.load("{}dqn_model_full_40000_0.pth".format(models_path), weights_only=True))
     model_w.load_state_dict(torch.load("{}dqn_model_full_40000_4.pth".format(models_path), weights_only=True))
-    black = DQNAgent(Player.BLACK, model_b, torch_device=get_device())
-    white = DQNAgent(Player.WHITE, model_w, torch_device=get_device())
+    black = NeuralNetworkAgent(Player.BLACK, model_b, torch_device=get_device())
+    white = NeuralNetworkAgent(Player.WHITE, model_w, torch_device=get_device())
     # black = RandomAgent(Player.BLACK)
     # white = RandomAgent(Player.WHITE)
     # white = MinimaxAgent(Player.WHITE, 1)

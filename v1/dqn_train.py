@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from v1.dqn import DQN
+from v1.dqn import NeuralNet
 from v1.dqn_replaybuffer import ReplayBuffer
 from v1.gamestate import GameState, print_board, BOARD_SHAPE
 from v1.player import Player, opponent
@@ -126,7 +126,7 @@ class DQNTrain:
         input_dim = self.input_dim  # Flattened board as input
         output_dim = self.output_dim  # Total number of possible actions
 
-        model = DQN(input_dim, output_dim, self.hidden_dim)
+        model = NeuralNet(input_dim, output_dim, self.hidden_dim)
         optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
         loss_fn = nn.MSELoss()
 

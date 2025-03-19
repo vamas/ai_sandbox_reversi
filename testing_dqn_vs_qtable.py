@@ -4,7 +4,7 @@ import sys
 import torch
 from tqdm import tqdm
 
-from v1.dqn_agent import DQNAgent
+from v1.dqn_agent import NeuralNetworkAgent
 from v1.minimax_agent import MinimaxAgent
 from v1.player import Player
 from v1.gamemanager_console import GameManager
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     black_model = torch.load("dqn_black_model_full_100000.pth")
     with open('qtable_white_20000.pkl', 'rb') as file:
         restored_qtable = pickle.load(file)
-    black = DQNAgent(Player.BLACK, black_model)
+    black = NeuralNetworkAgent(Player.BLACK, black_model)
     white = QTableAgent(Player.WHITE, restored_qtable)
 
     white = RandomAgent(Player.WHITE)

@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 import pickle
 
-from v1.dqn_agent import DQNAgent
+from v1.dqn_agent import NeuralNetworkAgent
 from v1.dqn_train import DQNTrain
 from v1.manual_agent import ManualAgent
 from v1.player import Player
